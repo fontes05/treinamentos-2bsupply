@@ -1519,8 +1519,10 @@ setTimeout(() => {
                       salvando ||
                       carregandoCategorias
                     }
-                    onValueChange={
-                      setCategoriaId
+                    onValueChange={(value) =>
+                      setCategoriaId(
+                        value ?? ""
+                      )
                     }
                   >
                     <SelectTrigger>
@@ -1991,15 +1993,17 @@ setTimeout(() => {
                               disabled={
                                 salvando
                               }
-                              onValueChange={(
-                                value
-                              ) =>
+                              onValueChange={(value) => {
+                                if (!value) {
+                                  return;
+                                }
+
                                 atualizarBeneficio(
                                   beneficio.id,
                                   "icone",
                                   value
-                                )
-                              }
+                                );
+                              }}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Selecione" />
@@ -2399,13 +2403,15 @@ setTimeout(() => {
                   <Select
                     value={status}
                     disabled={salvando}
-                    onValueChange={(
-                      value
-                    ) =>
+                    onValueChange={(value) => {
+                      if (!value) {
+                        return;
+                      }
+
                       setStatus(
                         value as StatusTreinamento
-                      )
-                    }
+                      );
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />

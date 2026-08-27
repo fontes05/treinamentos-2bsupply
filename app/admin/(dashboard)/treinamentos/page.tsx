@@ -136,7 +136,9 @@ export default function TreinamentosPage() {
     useState("");
 
   const [status, setStatus] =
-    useState("todos");
+    useState<
+      "todos" | StatusTreinamento
+    >("todos");
 
   const [loading, setLoading] =
     useState(true);
@@ -419,7 +421,17 @@ export default function TreinamentosPage() {
 
               <Select
                 value={status}
-                onValueChange={setStatus}
+                onValueChange={(value) => {
+                  if (!value) {
+                    return;
+                  }
+
+                  setStatus(
+                    value as
+                      | "todos"
+                      | StatusTreinamento
+                  );
+                }}
               >
                 <SelectTrigger className="sm:w-[170px]">
                   <SelectValue />

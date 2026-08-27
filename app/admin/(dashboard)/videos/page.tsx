@@ -693,19 +693,17 @@ export default function VideosPage() {
           </p>
         </div>
 
-        <Button
-          asChild
-          className="h-10 bg-[#009b69] px-4 text-white hover:bg-[#00875a]"
+        <Link
+          href="/admin/videos/novo"
+          className="inline-flex h-10 items-center justify-center rounded-md bg-[#009b69] px-4 text-sm font-medium text-white transition-colors hover:bg-[#00875a]"
         >
-          <Link href="/admin/videos/novo">
-            <Plus
-              size={17}
-              className="mr-2"
-            />
+          <Plus
+            size={17}
+            className="mr-2"
+          />
 
-            Adicionar vídeo
-          </Link>
-        </Button>
+          Adicionar vídeo
+        </Link>
       </div>
 
       {/* =====================================================
@@ -877,8 +875,10 @@ export default function VideosPage() {
                 value={
                   filtroTipo
                 }
-                onValueChange={
-                  setFiltroTipo
+                onValueChange={(value) =>
+                  setFiltroTipo(
+                    value ?? "todos"
+                  )
                 }
               >
                 <SelectTrigger className="h-10 w-full sm:w-[180px]">
@@ -915,8 +915,10 @@ export default function VideosPage() {
                 value={
                   filtroStatus
                 }
-                onValueChange={
-                  setFiltroStatus
+                onValueChange={(value) =>
+                  setFiltroStatus(
+                    value ?? "todos"
+                  )
                 }
               >
                 <SelectTrigger className="h-10 w-full sm:w-[150px]">
@@ -968,19 +970,17 @@ export default function VideosPage() {
                 Adicione prévias dos treinamentos, trailers, aulas demonstrativas ou apresentações dos professores.
               </p>
 
-              <Button
-                asChild
-                className="mt-5 bg-[#009b69] text-white hover:bg-[#00875a]"
+              <Link
+                href="/admin/videos/novo"
+                className="mt-5 inline-flex h-9 items-center justify-center rounded-md bg-[#009b69] px-4 text-sm font-medium text-white transition-colors hover:bg-[#00875a]"
               >
-                <Link href="/admin/videos/novo">
-                  <Plus
-                    size={17}
-                    className="mr-2"
-                  />
+                <Plus
+                  size={17}
+                  className="mr-2"
+                />
 
-                  Adicionar primeiro vídeo
-                </Link>
-              </Button>
+                Adicionar primeiro vídeo
+              </Link>
 
             </div>
           ) : videosFiltrados
@@ -1235,43 +1235,33 @@ export default function VideosPage() {
 
                               {/* ASSISTIR */}
 
-                              <Button
-                                asChild
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 !text-[#71717a] hover:!bg-emerald-50 hover:!text-emerald-700"
+                              <a
+                                href={
+                                  video.video_url
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-md !text-[#71717a] transition-colors hover:!bg-emerald-50 hover:!text-emerald-700"
                                 title="Assistir vídeo"
+                                aria-label="Assistir vídeo"
                               >
-                                <a
-                                  href={
-                                    video.video_url
-                                  }
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <Play
-                                    size={17}
-                                  />
-                                </a>
-                              </Button>
+                                <Play
+                                  size={17}
+                                />
+                              </a>
 
                               {/* EDITAR */}
 
-                              <Button
-                                asChild
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 !text-[#71717a] hover:!bg-blue-50 hover:!text-blue-700"
+                              <Link
+                                href={`/admin/videos/${video.id}/editar`}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-md !text-[#71717a] transition-colors hover:!bg-blue-50 hover:!text-blue-700"
                                 title="Editar vídeo"
+                                aria-label="Editar vídeo"
                               >
-                                <Link
-                                  href={`/admin/videos/${video.id}/editar`}
-                                >
-                                  <Pencil
-                                    size={17}
-                                  />
-                                </Link>
-                              </Button>
+                                <Pencil
+                                  size={17}
+                                />
+                              </Link>
 
                               {/* EXCLUIR */}
 

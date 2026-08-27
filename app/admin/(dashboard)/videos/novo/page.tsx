@@ -1307,11 +1307,13 @@ export default function NovoVideoPage() {
               disabled={
                 salvando
               }
-              asChild
+              onClick={() =>
+                router.push(
+                  "/admin/videos"
+                )
+              }
             >
-              <Link href="/admin/videos">
-                Cancelar
-              </Link>
+              Cancelar
             </Button>
 
             <Button
@@ -1464,8 +1466,10 @@ export default function NovoVideoPage() {
                       salvando ||
                       carregandoCursos
                     }
-                    onValueChange={
-                      setCursoId
+                    onValueChange={(value) =>
+                      setCursoId(
+                        value ?? ""
+                      )
                     }
                   >
 
@@ -1599,13 +1603,15 @@ export default function NovoVideoPage() {
                       disabled={
                         salvando
                       }
-                      onValueChange={(
-                        value
-                      ) =>
+                      onValueChange={(value) => {
+                        if (!value) {
+                          return;
+                        }
+
                         setTipo(
                           value as TipoVideo
-                        )
-                      }
+                        );
+                      }}
                     >
 
                       <SelectTrigger>
@@ -2230,25 +2236,18 @@ export default function NovoVideoPage() {
                     </div>
 
                     {cursoSelecionado.slug && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        asChild
-                        className="w-full"
+                      <Link
+                        href={`/${cursoSelecionado.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100 hover:text-zinc-950"
                       >
+                        <ExternalLink
+                          size={16}
+                        />
 
-                        <Link
-                          href={`/${cursoSelecionado.slug}`}
-                          target="_blank"
-                        >
-                          <ExternalLink
-                            size={16}
-                          />
-
-                          Ver treinamento
-                        </Link>
-
-                      </Button>
+                        Ver treinamento
+                      </Link>
                     )}
 
                   </div>

@@ -2556,8 +2556,10 @@ status,
                     disabled={
                       salvando
                     }
-                    onValueChange={
-                      setCategoriaId
+                    onValueChange={(value) =>
+                      setCategoriaId(
+                        value ?? ""
+                      )
                     }
                   >
                     <SelectTrigger>
@@ -2968,13 +2970,11 @@ status,
                               disabled={
                                 salvando
                               }
-                              onValueChange={(
-                                value
-                              ) =>
+                              onValueChange={(value) =>
                                 atualizarBeneficio(
                                   beneficio.id,
                                   "icone",
-                                  value
+                                  value ?? ""
                                 )
                               }
                             >
@@ -3546,13 +3546,15 @@ status,
                     disabled={
                       salvando
                     }
-                    onValueChange={(
-                      value
-                    ) =>
+                    onValueChange={(value) => {
+                      if (!value) {
+                        return;
+                      }
+
                       setStatus(
                         value as StatusTreinamento
-                      )
-                    }
+                      );
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
