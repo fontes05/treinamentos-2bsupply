@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import {
   FolderOpen,
   Plus,
@@ -9,6 +9,7 @@ import {
   X,
   Check,
   Loader2,
+  Upload,
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
@@ -18,6 +19,7 @@ type Categoria = {
   nome: string;
   slug: string;
   descricao: string | null;
+  icone_svg_url: string | null;
   ativo: boolean;
   created_at: string;
 };
@@ -31,6 +33,11 @@ export default function CategoriasPage() {
 
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
+
+  const [iconeSvg, setIconeSvg] = useState<File | null>(null);
+  const [iconeSvgPreview, setIconeSvgPreview] = useState("");
+  const [iconeSvgAtualUrl, setIconeSvgAtualUrl] = useState("");
+  const [iconeSvgOriginalUrl, setIconeSvgOriginalUrl] = useState("");
 
   const [editandoId, setEditandoId] = useState<number | null>(null);
 
@@ -46,6 +53,131 @@ export default function CategoriasPage() {
       .trim()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
+  }
+
+  // =====================================================
+  // SVG
+  // =====================================================
+
+  async function validarSvg(file: File) {
+    const nomeArquivo = file.name.toLowerCase();
+
+    if (!nomeArquivo.endsWith(".svg")) {
+      throw new Error("Envie um arquivo no formato SVG.");
+    }
+
+    if (file.type && file.type !== "image/svg+xml") {
+      throw new Error("O arquivo selecionado não é um SVG válido.");
+    }
+
+    const limite = 1024 * 1024;
+
+    if (file.size > limite) {
+      throw new Error("O SVG deve ter no máximo 1 MB.");
+    }
+
+    const conteudo = await file.text();
+
+    if (!/<svg[\s>]/i.test(conteudo)) {
+      throw new Error("O arquivo selecionado não contém um SVG válido.");
+    }
+
+    if (
+      /<script[\s>]/i.test(conteudo) ||
+      /\bon\w+\s*=/i.test(conteudo) ||
+      /javascript\s*:/i.test(conteudo)
+    ) {
+      throw new Error(
+        "Por segurança, o SVG não pode conter scripts ou eventos JavaScript."
+      );
+    }
+  }
+
+  function extrairStoragePath(publicUrl: string | null) {
+    if (!publicUrl) {
+      return null;
+    }
+
+    const marker =
+      "/storage/v1/object/public/treinamentos-media/";
+
+    const index = publicUrl.indexOf(marker);
+
+    if (index === -1) {
+      return null;
+    }
+
+    return decodeURIComponent(
+      publicUrl.substring(index + marker.length)
+    );
+  }
+
+  async function uploadSvg(file: File) {
+    await validarSvg(file);
+
+    const path = `categorias/${crypto.randomUUID()}.svg`;
+
+    const { error } = await supabase.storage
+      .from("treinamentos-media")
+      .upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: "image/svg+xml",
+      });
+
+    if (error) {
+      throw new Error(`Erro ao enviar SVG: ${error.message}`);
+    }
+
+    const { data } = supabase.storage
+      .from("treinamentos-media")
+      .getPublicUrl(path);
+
+    return {
+      path,
+      url: data.publicUrl,
+    };
+  }
+
+  async function handleSvgChange(
+    event: ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      await validarSvg(file);
+
+      if (iconeSvgPreview) {
+        URL.revokeObjectURL(iconeSvgPreview);
+      }
+
+      setIconeSvg(file);
+      setIconeSvgPreview(URL.createObjectURL(file));
+
+      event.target.value = "";
+    } catch (error) {
+      event.target.value = "";
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível carregar o SVG."
+      );
+    }
+  }
+
+  function removerSvgSelecionado() {
+    if (iconeSvgPreview) {
+      URL.revokeObjectURL(iconeSvgPreview);
+    }
+
+    setIconeSvg(null);
+    setIconeSvgPreview("");
+    setIconeSvgAtualUrl("");
   }
 
   // =====================================================
@@ -108,56 +240,98 @@ async function carregarCategorias() {
 
     const slug = gerarSlug(nome);
 
-    if (editandoId) {
-      const { error } = await supabase
-        .from("treinamentos_categorias")
-        .update({
-          nome: nome.trim(),
-          slug,
-          descricao: descricao.trim() || null,
-        })
-        .eq("id", editandoId);
+    let novoSvgPath: string | null = null;
+
+    try {
+      let svgFinalUrl = iconeSvgAtualUrl || null;
+
+      if (iconeSvg) {
+        const upload = await uploadSvg(iconeSvg);
+
+        novoSvgPath = upload.path;
+        svgFinalUrl = upload.url;
+      }
+
+      const dadosCategoria = {
+        nome: nome.trim(),
+        slug,
+        descricao: descricao.trim() || null,
+        icone_svg_url: svgFinalUrl,
+      };
+
+      const { error } = editandoId
+        ? await supabase
+            .from("treinamentos_categorias")
+            .update(dadosCategoria)
+            .eq("id", editandoId)
+        : await supabase
+            .from("treinamentos_categorias")
+            .insert({
+              ...dadosCategoria,
+              ativo: true,
+            });
 
       if (error) {
+        if (novoSvgPath) {
+          await supabase.storage
+            .from("treinamentos-media")
+            .remove([novoSvgPath]);
+        }
+
         console.error(error);
 
         if (error.code === "23505") {
           alert("Já existe uma categoria com esse nome.");
         } else {
-          alert("Erro ao atualizar categoria.");
+          alert(`Erro ao salvar categoria: ${error.message}`);
         }
 
-        setSalvando(false);
         return;
       }
-    } else {
-      const { error } = await supabase
-        .from("treinamentos_categorias")
-        .insert({
-          nome: nome.trim(),
-          slug,
-          descricao: descricao.trim() || null,
-          ativo: true,
-        });
 
-      if (error) {
-        console.error(error);
+      /*
+       * Se o ícone antigo foi substituído ou removido,
+       * apagamos o arquivo anterior do Storage.
+       */
+      if (
+        iconeSvgOriginalUrl &&
+        svgFinalUrl !== iconeSvgOriginalUrl
+      ) {
+        const oldPath = extrairStoragePath(iconeSvgOriginalUrl);
 
-        if (error.code === "23505") {
-          alert("Já existe uma categoria com esse nome.");
-        } else {
-          alert("Erro ao criar categoria.");
+        if (oldPath) {
+          const { error: removeError } = await supabase.storage
+            .from("treinamentos-media")
+            .remove([oldPath]);
+
+          if (removeError) {
+            console.warn(
+              "Não foi possível apagar o SVG antigo:",
+              removeError
+            );
+          }
         }
-
-        setSalvando(false);
-        return;
       }
+
+      limparFormulario();
+      await carregarCategorias();
+    } catch (error) {
+      if (novoSvgPath) {
+        await supabase.storage
+          .from("treinamentos-media")
+          .remove([novoSvgPath]);
+      }
+
+      console.error(error);
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Ocorreu um erro inesperado ao salvar a categoria."
+      );
+    } finally {
+      setSalvando(false);
     }
-
-    limparFormulario();
-    await carregarCategorias();
-
-    setSalvando(false);
   }
 
   // =====================================================
@@ -165,9 +339,18 @@ async function carregarCategorias() {
   // =====================================================
 
   function editarCategoria(categoria: Categoria) {
+    if (iconeSvgPreview) {
+      URL.revokeObjectURL(iconeSvgPreview);
+    }
+
     setEditandoId(categoria.id);
     setNome(categoria.nome);
     setDescricao(categoria.descricao || "");
+
+    setIconeSvg(null);
+    setIconeSvgPreview("");
+    setIconeSvgAtualUrl(categoria.icone_svg_url || "");
+    setIconeSvgOriginalUrl(categoria.icone_svg_url || "");
 
     window.scrollTo({
       top: 0,
@@ -180,9 +363,18 @@ async function carregarCategorias() {
   // =====================================================
 
   function limparFormulario() {
+    if (iconeSvgPreview) {
+      URL.revokeObjectURL(iconeSvgPreview);
+    }
+
     setEditandoId(null);
     setNome("");
     setDescricao("");
+
+    setIconeSvg(null);
+    setIconeSvgPreview("");
+    setIconeSvgAtualUrl("");
+    setIconeSvgOriginalUrl("");
   }
 
   // =====================================================
@@ -236,7 +428,24 @@ async function carregarCategorias() {
       return;
     }
 
-    carregarCategorias();
+    if (categoria.icone_svg_url) {
+      const path = extrairStoragePath(categoria.icone_svg_url);
+
+      if (path) {
+        const { error: removeError } = await supabase.storage
+          .from("treinamentos-media")
+          .remove([path]);
+
+        if (removeError) {
+          console.warn(
+            "Não foi possível apagar o SVG da categoria:",
+            removeError
+          );
+        }
+      }
+    }
+
+    void carregarCategorias();
   }
 
   return (
@@ -301,6 +510,68 @@ async function carregarCategorias() {
                     Slug: {gerarSlug(nome)}
                   </p>
                 )}
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Ícone da categoria
+                </label>
+
+                <label className="flex min-h-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-5 transition hover:border-[#667cf8]/50 hover:bg-[#667cf8]/5">
+                  {iconeSvgPreview || iconeSvgAtualUrl ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-white p-3 shadow-sm">
+                        <img
+                          src={iconeSvgPreview || iconeSvgAtualUrl}
+                          alt="Prévia do ícone da categoria"
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+
+                      <span className="text-xs font-medium text-slate-500">
+                        Clique para substituir o SVG
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Upload
+                        size={24}
+                        className="mx-auto text-[#667cf8]"
+                      />
+
+                      <p className="mt-2 text-sm font-medium text-slate-700">
+                        Enviar ícone SVG
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-400">
+                        Somente .svg · máximo 1 MB
+                      </p>
+                    </div>
+                  )}
+
+                  <input
+                    type="file"
+                    accept=".svg,image/svg+xml"
+                    className="hidden"
+                    disabled={salvando}
+                    onChange={handleSvgChange}
+                  />
+                </label>
+
+                {(iconeSvgPreview || iconeSvgAtualUrl) && (
+                  <button
+                    type="button"
+                    onClick={removerSvgSelecionado}
+                    disabled={salvando}
+                    className="mt-2 text-xs font-medium text-red-500 transition hover:text-red-600 disabled:opacity-50"
+                  >
+                    Remover ícone
+                  </button>
+                )}
+
+                <p className="mt-2 text-xs text-slate-400">
+                  O SVG será utilizado como ícone visual desta categoria no site.
+                </p>
               </div>
 
               <div>
@@ -402,8 +673,16 @@ async function carregarCategorias() {
                     key={categoria.id}
                     className="flex items-center gap-4 px-6 py-5 transition hover:bg-slate-50/70"
                   >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#667cf8]/10">
-                      <FolderOpen size={20} className="text-[#667cf8]" />
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#667cf8]/10 p-2.5">
+                      {categoria.icone_svg_url ? (
+                        <img
+                          src={categoria.icone_svg_url}
+                          alt=""
+                          className="h-full w-full object-contain"
+                        />
+                      ) : (
+                        <FolderOpen size={20} className="text-[#667cf8]" />
+                      )}
                     </div>
 
                     <div className="min-w-0 flex-1">

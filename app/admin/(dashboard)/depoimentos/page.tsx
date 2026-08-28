@@ -54,6 +54,8 @@ export default function DepoimentosPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const [form, setForm] = useState<FormState>(initialForm);
 
   const [fotoFile, setFotoFile] = useState<File | null>(null);
@@ -84,7 +86,7 @@ export default function DepoimentosPage() {
             foto_url,
             estrelas,
             created_at
-          `
+          `,
         )
         .order("created_at", {
           ascending: false,
@@ -101,7 +103,7 @@ export default function DepoimentosPage() {
       setErro(
         error?.message
           ? `Erro ao carregar depoimentos: ${error.message}`
-          : "Erro ao carregar os depoimentos."
+          : "Erro ao carregar os depoimentos.",
       );
     } finally {
       setLoading(false);
@@ -131,7 +133,7 @@ export default function DepoimentosPage() {
   function alterarCampo(
     event:
       | ChangeEvent<HTMLInputElement>
-      | ChangeEvent<HTMLTextAreaElement>
+      | ChangeEvent<HTMLTextAreaElement>,
   ) {
     const { name, value } = event.target;
 
@@ -162,7 +164,7 @@ export default function DepoimentosPage() {
 
     if (!formatosPermitidos.includes(file.type)) {
       setErro(
-        "A foto precisa estar no formato JPG, PNG ou WEBP."
+        "A foto precisa estar no formato JPG, PNG ou WEBP.",
       );
 
       event.target.value = "";
@@ -208,7 +210,7 @@ export default function DepoimentosPage() {
 
     if (uploadError) {
       throw new Error(
-        `Erro ao enviar foto: ${uploadError.message}`
+        `Erro ao enviar foto: ${uploadError.message}`,
       );
     }
 
@@ -217,6 +219,29 @@ export default function DepoimentosPage() {
       .getPublicUrl(caminho);
 
     return data.publicUrl;
+  }
+
+  /* ============================================================
+     PEGAR CAMINHO DA FOTO NO STORAGE
+  ============================================================ */
+
+  function obterCaminhoFotoStorage(fotoUrl: string) {
+    try {
+      const marcador =
+        "/storage/v1/object/public/treinamentos-depoimentos/";
+
+      const indice = fotoUrl.indexOf(marcador);
+
+      if (indice === -1) {
+        return null;
+      }
+
+      return decodeURIComponent(
+        fotoUrl.substring(indice + marcador.length),
+      );
+    } catch {
+      return null;
+    }
   }
 
   /* ============================================================
@@ -233,19 +258,19 @@ export default function DepoimentosPage() {
 
       if (!form.nome.trim()) {
         throw new Error(
-          "Informe o nome da pessoa."
+          "Informe o nome da pessoa.",
         );
       }
 
       if (!form.cargo.trim()) {
         throw new Error(
-          "Informe o cargo da pessoa."
+          "Informe o cargo da pessoa.",
         );
       }
 
       if (!form.depoimento.trim()) {
         throw new Error(
-          "Informe o depoimento."
+          "Informe o depoimento.",
         );
       }
 
@@ -254,7 +279,7 @@ export default function DepoimentosPage() {
         form.estrelas > 5
       ) {
         throw new Error(
-          "A avaliação deve ter entre 1 e 5 estrelas."
+          "A avaliação deve ter entre 1 e 5 estrelas.",
         );
       }
 
@@ -279,7 +304,7 @@ export default function DepoimentosPage() {
         }
 
         setSucesso(
-          "Depoimento atualizado com sucesso."
+          "Depoimento atualizado com sucesso.",
         );
       } else {
         const { error } = await supabase
@@ -291,7 +316,7 @@ export default function DepoimentosPage() {
         }
 
         setSucesso(
-          "Depoimento cadastrado com sucesso."
+          "Depoimento cadastrado com sucesso.",
         );
       }
 
@@ -306,7 +331,7 @@ export default function DepoimentosPage() {
 
       setErro(
         error?.message ||
-          "Não foi possível salvar o depoimento."
+          "Não foi possível salvar o depoimento.",
       );
     } finally {
       setSaving(false);
@@ -345,8 +370,12 @@ export default function DepoimentosPage() {
   ============================================================ */
 
   async function excluirDepoimento(item: Depoimento) {
+    if (deletingId) {
+      return;
+    }
+
     const confirmou = window.confirm(
-      `Deseja realmente excluir o depoimento de ${item.nome}?`
+      `Deseja realmente excluir o depoimento de "${item.nome}"?\n\nEssa ação não poderá ser desfeita.`,
     );
 
     if (!confirmou) {
@@ -354,34 +383,86 @@ export default function DepoimentosPage() {
     }
 
     try {
+      setDeletingId(item.id);
       setErro("");
       setSucesso("");
 
-      const { error } = await supabase
+      /* --------------------------------------------------------
+         1. EXCLUI O REGISTRO DO BANCO
+      -------------------------------------------------------- */
+
+      const { error: deleteError } = await supabase
         .from("treinamentos_depoimentos")
         .delete()
         .eq("id", item.id);
 
-      if (error) {
-        throw error;
+      if (deleteError) {
+        throw deleteError;
       }
 
+      /* --------------------------------------------------------
+         2. REMOVE DA LISTA IMEDIATAMENTE
+      -------------------------------------------------------- */
+
+      setDepoimentos((prev) =>
+        prev.filter(
+          (depoimento) =>
+            depoimento.id !== item.id,
+        ),
+      );
+
+      /* --------------------------------------------------------
+         3. SE ESTIVER EDITANDO ESTE ITEM, LIMPA O FORM
+      -------------------------------------------------------- */
+
       if (editingId === item.id) {
-        limparForm();
+        setForm(initialForm);
+        setFotoFile(null);
+        setFotoPreview("");
+        setEditingId(null);
+      }
+
+      /* --------------------------------------------------------
+         4. TENTA EXCLUIR A FOTO DO STORAGE
+         A exclusão do depoimento NÃO falha caso a foto
+         não possa ser removida.
+      -------------------------------------------------------- */
+
+      if (item.foto_url) {
+        const caminhoFoto =
+          obterCaminhoFotoStorage(item.foto_url);
+
+        if (caminhoFoto) {
+          const { error: storageError } =
+            await supabase.storage
+              .from("treinamentos-depoimentos")
+              .remove([caminhoFoto]);
+
+          if (storageError) {
+            console.warn(
+              "O depoimento foi excluído, mas não foi possível remover a foto do Storage:",
+              storageError.message,
+            );
+          }
+        }
       }
 
       setSucesso(
-        "Depoimento excluído com sucesso."
+        `Depoimento de ${item.nome} excluído com sucesso.`,
       );
-
-      await carregarDepoimentos();
     } catch (error: any) {
-      console.error(error);
+      console.error(
+        "Erro ao excluir depoimento:",
+        error,
+      );
 
       setErro(
-        error?.message ||
-          "Não foi possível excluir o depoimento."
+        error?.message
+          ? `Não foi possível excluir o depoimento: ${error.message}`
+          : "Não foi possível excluir o depoimento.",
       );
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -491,8 +572,6 @@ export default function DepoimentosPage() {
           className="space-y-6"
         >
           <div className="grid gap-6 lg:grid-cols-2">
-            {/* Nome */}
-
             <div>
               <label
                 htmlFor="nome"
@@ -511,8 +590,6 @@ export default function DepoimentosPage() {
                 className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
               />
             </div>
-
-            {/* Cargo */}
 
             <div>
               <label
@@ -533,8 +610,6 @@ export default function DepoimentosPage() {
               />
             </div>
           </div>
-
-          {/* Depoimento */}
 
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -560,8 +635,6 @@ export default function DepoimentosPage() {
               className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
             />
           </div>
-
-          {/* Estrelas */}
 
           <div>
             <label className="mb-3 block text-sm font-medium text-slate-700">
@@ -593,7 +666,7 @@ export default function DepoimentosPage() {
                       }`}
                     />
                   </button>
-                )
+                ),
               )}
 
               <span className="ml-2 text-sm font-medium text-slate-600">
@@ -601,8 +674,6 @@ export default function DepoimentosPage() {
               </span>
             </div>
           </div>
-
-          {/* Foto */}
 
           <div>
             <label className="mb-3 block text-sm font-medium text-slate-700">
@@ -649,8 +720,6 @@ export default function DepoimentosPage() {
               </div>
             </div>
           </div>
-
-          {/* Botão */}
 
           <div className="flex justify-end border-t border-slate-100 pt-6">
             <button
@@ -731,8 +800,6 @@ export default function DepoimentosPage() {
                 key={item.id}
                 className="relative rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-sm"
               >
-                {/* Estrelas */}
-
                 <div className="mb-4 flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map(
                     (estrela) => (
@@ -744,17 +811,15 @@ export default function DepoimentosPage() {
                             : "text-slate-200"
                         }`}
                       />
-                    )
+                    ),
                   )}
                 </div>
-
-                {/* Texto */}
 
                 <p className="mb-6 text-sm leading-7 text-slate-600">
                   “{item.depoimento}”
                 </p>
 
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 items-center gap-3">
                     {item.foto_url ? (
                       <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-slate-100">
@@ -782,18 +847,24 @@ export default function DepoimentosPage() {
                     </div>
                   </div>
 
-                  {/* Ações */}
+                  {/* =================================================
+                      AÇÕES
+                  ================================================== */}
 
-                  <div className="flex shrink-0 items-center gap-1">
+                  <div className="flex shrink-0 items-center gap-2">
                     <button
                       type="button"
                       onClick={() =>
                         editarDepoimento(item)
                       }
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-sky-50 hover:text-sky-600"
-                      title="Editar depoimento"
+                      disabled={
+                        deletingId === item.id
+                      }
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-600 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="h-3.5 w-3.5" />
+
+                      Editar
                     </button>
 
                     <button
@@ -801,10 +872,25 @@ export default function DepoimentosPage() {
                       onClick={() =>
                         excluirDepoimento(item)
                       }
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-600"
-                      title="Excluir depoimento"
+                      disabled={
+                        deletingId !== null
+                      }
+                      className="inline-flex h-9 min-w-[92px] items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-medium text-red-600 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {deletingId ===
+                      item.id ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+
+                          Excluindo
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-3.5 w-3.5" />
+
+                          Excluir
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

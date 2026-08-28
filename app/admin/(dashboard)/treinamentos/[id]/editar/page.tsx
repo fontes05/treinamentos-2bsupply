@@ -278,46 +278,45 @@ function extrairStoragePath(
    SLUG ÚNICO
 --------------------------------------------------------- */
 
-async function gerarSlugUnico(
+async function validarSlugUnico(
   supabase: SupabaseClient,
-  titulo: string,
+  slugInformado: string,
   cursoId: string
 ) {
-  const base =
-    slugify(titulo) ||
-    `treinamento-${Date.now()}`;
+  const slug =
+    slugify(slugInformado);
 
-  let slug = base;
-  let numero = 2;
-
-  while (true) {
-    const {
-      data,
-      error,
-    } = await supabase
-      .from(
-        "treinamentos_cursos"
-      )
-      .select("id")
-      .eq("slug", slug)
-      .neq("id", cursoId)
-      .maybeSingle();
-
-    if (error) {
-      throw new Error(
-        `Não foi possível gerar o slug: ${error.message}`
-      );
-    }
-
-    if (!data) {
-      return slug;
-    }
-
-    slug =
-      `${base}-${numero}`;
-
-    numero++;
+  if (!slug) {
+    throw new Error(
+      "Informe a URL do curso."
+    );
   }
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      "treinamentos_cursos"
+    )
+    .select("id")
+    .eq("slug", slug)
+    .neq("id", cursoId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Não foi possível validar a URL do curso: ${error.message}`
+    );
+  }
+
+  if (data) {
+    throw new Error(
+      "Já existe outro curso utilizando esta URL."
+    );
+  }
+
+  return slug;
 }
 
 /* =========================================================
@@ -368,6 +367,11 @@ export default function EditarTreinamentoPage() {
   ] = useState("");
 
   const [
+    slugCurso,
+    setSlugCurso,
+  ] = useState("");
+
+  const [
     descricao,
     setDescricao,
   ] = useState("");
@@ -380,6 +384,36 @@ export default function EditarTreinamentoPage() {
   const [
     porqueAprender,
     setPorqueAprender,
+  ] = useState("");
+
+  const [
+    objetivoGeral,
+    setObjetivoGeral,
+  ] = useState("");
+
+  const [
+    beneficiosCurso,
+    setBeneficiosCurso,
+  ] = useState("");
+
+  const [
+    competenciasDesenvolvidas,
+    setCompetenciasDesenvolvidas,
+  ] = useState("");
+
+  const [
+    metodologiaAprendizagem,
+    setMetodologiaAprendizagem,
+  ] = useState("");
+
+  const [
+    avaliacaoCertificacao,
+    setAvaliacaoCertificacao,
+  ] = useState("");
+
+  const [
+    resultadoEsperado,
+    setResultadoEsperado,
   ] = useState("");
 
   const [
@@ -621,9 +655,16 @@ const [
 .select(`
   id,
   titulo,
+  slug,
   descricao,
   publico_alvo,
   porque_aprender,
+  objetivo_geral,
+  beneficios_curso,
+  competencias_desenvolvidas,
+  metodologia_aprendizagem,
+  avaliacao_certificacao,
+  resultado_esperado,
   imagem_url,
   video_introdutorio_url,
   preco_de,
@@ -649,6 +690,14 @@ const [
           curso.titulo || ""
         );
 
+        setSlugCurso(
+          curso.slug ||
+            slugify(
+              curso.titulo ||
+                ""
+            )
+        );
+
         setDescricao(
           curso.descricao ||
             ""
@@ -661,6 +710,36 @@ const [
 
         setPorqueAprender(
           curso.porque_aprender ||
+            ""
+        );
+
+        setObjetivoGeral(
+          curso.objetivo_geral ||
+            ""
+        );
+
+        setBeneficiosCurso(
+          curso.beneficios_curso ||
+            ""
+        );
+
+        setCompetenciasDesenvolvidas(
+          curso.competencias_desenvolvidas ||
+            ""
+        );
+
+        setMetodologiaAprendizagem(
+          curso.metodologia_aprendizagem ||
+            ""
+        );
+
+        setAvaliacaoCertificacao(
+          curso.avaliacao_certificacao ||
+            ""
+        );
+
+        setResultadoEsperado(
+          curso.resultado_esperado ||
             ""
         );
 
@@ -1557,6 +1636,24 @@ setLinkInscricao(
     }
 
     if (
+      !slugify(
+        slugCurso
+      )
+    ) {
+      setErro(
+        "Informe a URL do curso."
+      );
+
+      window.scrollTo({
+        top: 0,
+        behavior:
+          "smooth",
+      });
+
+      return;
+    }
+
+    if (
       !categoriaId
     ) {
       setErro(
@@ -1625,9 +1722,9 @@ setLinkInscricao(
       =============================================== */
 
       const slug =
-        await gerarSlugUnico(
+        await validarSlugUnico(
           supabase,
-          titulo,
+          slugCurso,
           cursoId
         );
 
@@ -1696,6 +1793,30 @@ setLinkInscricao(
 
           porque_aprender:
             porqueAprender.trim() ||
+            null,
+
+          objetivo_geral:
+            objetivoGeral.trim() ||
+            null,
+
+          beneficios_curso:
+            beneficiosCurso.trim() ||
+            null,
+
+          competencias_desenvolvidas:
+            competenciasDesenvolvidas.trim() ||
+            null,
+
+          metodologia_aprendizagem:
+            metodologiaAprendizagem.trim() ||
+            null,
+
+          avaliacao_certificacao:
+            avaliacaoCertificacao.trim() ||
+            null,
+
+          resultado_esperado:
+            resultadoEsperado.trim() ||
             null,
 
           imagem_url:
@@ -2546,6 +2667,53 @@ status,
 
                 <div className="space-y-2">
                   <Label>
+                    URL do curso
+                  </Label>
+
+                  <div className="flex overflow-hidden rounded-md border border-input shadow-xs focus-within:ring-[3px] focus-within:ring-ring/50">
+                    <div className="flex shrink-0 items-center border-r border-input bg-zinc-50 px-3 text-sm text-zinc-500">
+                      /cursos/
+                    </div>
+
+                    <Input
+                      value={
+                        slugCurso
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        setSlugCurso(
+                          event.target
+                            .value
+                        )
+                      }
+                      onBlur={() =>
+                        setSlugCurso(
+                          slugify(
+                            slugCurso
+                          )
+                        )
+                      }
+                      placeholder="nome-do-curso"
+                      className="rounded-none border-0 shadow-none focus-visible:ring-0"
+                      disabled={
+                        salvando
+                      }
+                      required
+                    />
+                  </div>
+
+                  <p className="text-xs text-zinc-500">
+                    URL pública: /cursos/
+                    {slugify(
+                      slugCurso
+                    ) ||
+                      "nome-do-curso"}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
                     Categoria
                   </Label>
 
@@ -2686,6 +2854,184 @@ status,
                     salvando
                   }
                 />
+              </CardContent>
+            </Card>
+
+            {/* =============================================
+                DETALHES DO CURSO
+            ============================================= */}
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    <Target
+                      size={20}
+                    />
+                  </div>
+
+                  <div>
+                    <CardTitle>
+                      Detalhes do curso
+                    </CardTitle>
+
+                    <CardDescription className="mt-1">
+                      Informações complementares sobre objetivos, metodologia, competências e resultados.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label>
+                    Objetivo Geral
+                  </Label>
+
+                  <Textarea
+                    value={
+                      objetivoGeral
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setObjetivoGeral(
+                        event.target
+                          .value
+                      )
+                    }
+                    placeholder="Descreva o objetivo geral do curso..."
+                    className="min-h-[140px]"
+                    disabled={
+                      salvando
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Benefícios do curso
+                  </Label>
+
+                  <Textarea
+                    value={
+                      beneficiosCurso
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setBeneficiosCurso(
+                        event.target
+                          .value
+                      )
+                    }
+                    placeholder="Descreva os principais benefícios do curso..."
+                    className="min-h-[140px]"
+                    disabled={
+                      salvando
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Competências desenvolvidas
+                  </Label>
+
+                  <Textarea
+                    value={
+                      competenciasDesenvolvidas
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setCompetenciasDesenvolvidas(
+                        event.target
+                          .value
+                      )
+                    }
+                    placeholder="Informe as competências que serão desenvolvidas..."
+                    className="min-h-[140px]"
+                    disabled={
+                      salvando
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Metodologia de aprendizagem
+                  </Label>
+
+                  <Textarea
+                    value={
+                      metodologiaAprendizagem
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setMetodologiaAprendizagem(
+                        event.target
+                          .value
+                      )
+                    }
+                    placeholder="Explique como será conduzida a aprendizagem..."
+                    className="min-h-[140px]"
+                    disabled={
+                      salvando
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Avaliação e certificação
+                  </Label>
+
+                  <Textarea
+                    value={
+                      avaliacaoCertificacao
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setAvaliacaoCertificacao(
+                        event.target
+                          .value
+                      )
+                    }
+                    placeholder="Explique os critérios de avaliação e certificação..."
+                    className="min-h-[140px]"
+                    disabled={
+                      salvando
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Resultado esperado ao final do curso
+                  </Label>
+
+                  <Textarea
+                    value={
+                      resultadoEsperado
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setResultadoEsperado(
+                        event.target
+                          .value
+                      )
+                    }
+                    placeholder="Descreva o resultado esperado ao final do curso..."
+                    className="min-h-[140px]"
+                    disabled={
+                      salvando
+                    }
+                  />
+                </div>
               </CardContent>
             </Card>
 

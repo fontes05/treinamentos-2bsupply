@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import {
   type FormEvent,
@@ -24,6 +23,7 @@ type Categoria = {
   nome: string;
   slug: string;
   descricao: string | null;
+  icone_svg_url: string | null;
   ativo: boolean;
 };
 
@@ -34,6 +34,13 @@ type TreinamentoHome = {
   descricao: string | null;
   imagem_url: string | null;
   destaque: boolean;
+  categoria_id: number | null;
+};
+
+type BannerHome = {
+  id: string;
+  desktop_url: string | null;
+  mobile_url: string | null;
 };
 
 type Testimonial = {
@@ -61,6 +68,16 @@ export default function Home() {
 
   const [categories, setCategories] =
     useState<Categoria[]>([]);
+
+  const [
+    bannerDesktop,
+    setBannerDesktop,
+  ] = useState("/");
+
+  const [
+    bannerMobile,
+    setBannerMobile,
+  ] = useState("/");
 
   const [treinamentos, setTreinamentos] =
     useState<TreinamentoHome[]>([]);
@@ -166,6 +183,80 @@ export default function Home() {
   }
 
   /* =======================================================
+     BANNER DA HOME
+  ======================================================= */
+
+  useEffect(() => {
+    async function carregarBannerHome() {
+      const supabase =
+        createClient();
+
+      try {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from(
+            "treinamentos_banners",
+          )
+          .select(
+            `
+              id,
+              desktop_url,
+              mobile_url
+            `,
+          )
+          .eq(
+            "id",
+            "home",
+          )
+          .maybeSingle();
+
+        if (error) {
+          console.error(
+            "Erro ao carregar banner da Home:",
+            error,
+          );
+
+          return;
+        }
+
+        if (!data) {
+          return;
+        }
+
+        const banner =
+          data as BannerHome;
+
+        const desktop =
+          banner.desktop_url ||
+          banner.mobile_url ||
+          "/";
+
+        const mobile =
+          banner.mobile_url ||
+          banner.desktop_url ||
+          "/";
+
+        setBannerDesktop(
+          desktop,
+        );
+
+        setBannerMobile(
+          mobile,
+        );
+      } catch (error) {
+        console.error(
+          "Erro inesperado ao carregar banner da Home:",
+          error,
+        );
+      }
+    }
+
+    void carregarBannerHome();
+  }, []);
+
+  /* =======================================================
      CATEGORIAS DO SUPABASE
   ======================================================= */
 
@@ -188,6 +279,7 @@ export default function Home() {
               nome,
               slug,
               descricao,
+              icone_svg_url,
               ativo
             `,
           )
@@ -225,82 +317,82 @@ export default function Home() {
     void carregarCategorias();
   }, []);
 
-  /* =======================================================
-     TREINAMENTOS DO SUPABASE
-  ======================================================= */
+ /* =======================================================
+   TREINAMENTOS DO SUPABASE
+======================================================= */
 
-  useEffect(() => {
-    async function carregarTreinamentos() {
-      setCarregandoTreinamentos(
-        true,
-      );
+useEffect(() => {
+  async function carregarTreinamentos() {
+    setCarregandoTreinamentos(
+      true,
+    );
 
-      const supabase =
-        createClient();
+    const supabase =
+      createClient();
 
-      try {
-        const {
-          data,
-          error,
-        } = await supabase
-          .from(
-            "treinamentos_cursos",
-          )
-          .select(
-            `
-              id,
-              titulo,
-              slug,
-              descricao,
-              imagem_url,
-              destaque
-            `,
-          )
-          .eq(
-            "status",
-            "publicado",
-          )
-          .order(
-            "destaque",
-            {
-              ascending: false,
-            },
-          )
-          .order(
-            "created_at",
-            {
-              ascending: false,
-            },
-          )
-          .limit(6);
+    try {
+      const {
+        data,
+        error,
+      } = await supabase
+        .from(
+          "treinamentos_cursos",
+        )
+        .select(
+          `
+            id,
+            titulo,
+            slug,
+            descricao,
+            imagem_url,
+            destaque,
+            categoria_id
+          `,
+        )
+        .eq(
+          "status",
+          "publicado",
+        )
+        .order(
+          "destaque",
+          {
+            ascending: false,
+          },
+        )
+        .order(
+          "created_at",
+          {
+            ascending: false,
+          },
+        )
+        .limit(5);
 
-        if (error) {
-          console.error(
-            "Erro ao carregar treinamentos:",
-            error,
-          );
-
-          return;
-        }
-
-        setTreinamentos(
-          (data ?? []) as TreinamentoHome[],
-        );
-      } catch (error) {
+      if (error) {
         console.error(
-          "Erro inesperado ao carregar treinamentos:",
+          "Erro ao carregar treinamentos:",
           error,
         );
-      } finally {
-        setCarregandoTreinamentos(
-          false,
-        );
+
+        return;
       }
+
+      setTreinamentos(
+        (data ?? []) as TreinamentoHome[],
+      );
+    } catch (error) {
+      console.error(
+        "Erro inesperado ao carregar treinamentos:",
+        error,
+      );
+    } finally {
+      setCarregandoTreinamentos(
+        false,
+      );
     }
+  }
 
-    void carregarTreinamentos();
-  }, []);
-
+  void carregarTreinamentos();
+}, []);
   /* =======================================================
      DEPOIMENTOS DO SUPABASE
   ======================================================= */
@@ -534,14 +626,29 @@ async function handleNewsletterSubmit(
 
       <section className="hero">
         <div className="hero-background">
-          <Image
-            src="/hero-treinamentos.jpg"
-            alt="Tecnologia e inteligência artificial aplicada aos treinamentos 2BSUPPLY"
-            fill
-            priority
-            className="hero-background-image"
-            sizes="100vw"
-          />
+          <picture>
+            <source
+              media="(max-width: 768px)"
+              srcSet={bannerMobile}
+            />
+
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={bannerDesktop}
+              alt="Treinamentos 2BSUPPLY"
+              className="hero-background-image"
+              fetchPriority="high"
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center center",
+                display: "block",
+              }}
+            />
+          </picture>
 
           <div className="hero-background-overlay" />
         </div>
@@ -571,7 +678,7 @@ async function handleNewsletterSubmit(
 
             <div className="hero-actions">
               <Link
-                href="/todos"
+                href="/cursos"
                 className="primary-button"
               >
                 Explorar treinamentos
@@ -579,224 +686,268 @@ async function handleNewsletterSubmit(
                 <ArrowRightIcon />
               </Link>
 
-              <a
-                href="#empresas"
-                className="secondary-button"
-              >
-                Treinamentos para empresas
-              </a>
+             
             </div>
           </div>
         </div>
 
-        {/* CATEGORIAS */}
+{/* =====================================================
+    CATEGORIAS
+===================================================== */}
 
-        <div
-          className="container hero-categories"
-          id="areas"
+<div
+  className="container hero-categories"
+  id="areas"
+>
+  <div className="categories hidden md:grid">
+    {categories.map(
+      (category) => (
+        <Link
+          href={`/cursos?categoria=${encodeURIComponent(
+            category.slug,
+          )}`}
+          className="category-card"
+          key={category.id}
         >
-          <div className="categories">
-            {categories.map(
-              (category) => (
-                <Link
-                  href={`/todos?categoria=${encodeURIComponent(
-                    category.slug,
-                  )}`}
-                  className="category-card"
-                  key={category.id}
-                >
-                  <div className="category-icon">
-                    <CategoryIcon />
-                  </div>
+          <div className="category-icon">
+            {category.icone_svg_url ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={category.icone_svg_url}
+                  alt={`Ícone ${category.nome}`}
+                  className="category-svg"
+                />
+              </>
+            ) : (
+              <CategoryIcon />
+            )}
+          </div>
 
-                  <div>
-                    <strong>
-                      {category.nome}
-                    </strong>
+          <div>
+            <strong>
+              {category.nome}
+            </strong>
+          </div>
 
-                    <span>
-                      {category.descricao ||
-                        "Ver treinamentos"}
-                    </span>
-                  </div>
+          <ArrowRightIcon />
+        </Link>
+      ),
+    )}
+  </div>
+</div>
+      </section>
+
+{/* =====================================================
+    CURSOS
+====================================================== */}
+
+<section className="section courses-section">
+  <div className="container">
+    <div className="section-header">
+      <div>
+        <span className="section-kicker">
+          TREINAMENTOS EM DESTAQUE
+        </span>
+
+        <h2>
+          Conhecimento para{" "}
+          <span>
+            avançar na sua carreira
+          </span>
+        </h2>
+
+        <p>
+          Escolha o treinamento ideal para desenvolver
+          novas competências e elevar sua atuação
+          profissional.
+        </p>
+      </div>
+
+      <Link
+        href="/cursos"
+        className="view-all"
+      >
+        Ver todos os treinamentos
+
+        <ArrowRightIcon />
+      </Link>
+    </div>
+
+    <div className="courses-grid">
+      {treinamentos.map(
+        (
+          course,
+          index,
+        ) => {
+          /* =========================================
+             LOCALIZA A CATEGORIA DO CURSO
+          ========================================= */
+
+          const categoria =
+            categories.find(
+              (category) =>
+                category.id ===
+                course.categoria_id,
+            );
+
+          return (
+            <Link
+             href={`/cursos/${course.slug}`}
+              className="course-card"
+              key={course.id}
+              onClick={async (
+                event,
+              ) => {
+                event.preventDefault();
+
+                const destino =
+                  event.currentTarget.href;
+
+                await registrarEventoTreinamento(
+                  {
+                    slug:
+                      course.slug,
+
+                    titulo:
+                      course.titulo,
+
+                    evento:
+                      "curso_click",
+
+                    origem:
+                      "/",
+                  },
+                );
+
+                window.location.href =
+                  destino;
+              }}
+            >
+              {/* =====================================
+                  IMAGEM
+              ====================================== */}
+
+              <div
+                className={`course-cover course-cover-${
+                  (index % 6) + 1
+                }`}
+              >
+                {course.imagem_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={
+                      course.imagem_url
+                    }
+                    alt={
+                      course.titulo
+                    }
+                    className="course-cover-image"
+                  />
+                ) : (
+                  <>
+                    <div className="course-visual-icon">
+                      {getCourseInitials(
+                        course.titulo,
+                      )}
+                    </div>
+
+                    <div className="course-pattern" />
+                  </>
+                )}
+
+                {course.destaque && (
+                  <span className="course-tag">
+                    DESTAQUE
+                  </span>
+                )}
+              </div>
+
+              {/* =====================================
+                  CONTEÚDO
+              ====================================== */}
+
+              <div className="course-content">
+
+                {/* CATEGORIA REAL DO CURSO */}
+
+                <div className="course-category">
+                  {categoria?.nome ||
+                    "Treinamento"}
+                </div>
+
+                {/* TÍTULO */}
+
+                <h3>
+                  {course.titulo}
+                </h3>
+
+                {/* DESCRIÇÃO */}
+
+                <p>
+                  {course.descricao ||
+                    "Conheça este treinamento e desenvolva novas competências para sua carreira profissional."}
+                </p>
+
+                {/* INFORMAÇÕES */}
+
+                <div className="course-info">
+                  <span>
+                    Treinamento profissional
+                  </span>
+
+                  <span>
+                    •
+                  </span>
+
+                  <span>
+                    2BSUPPLY
+                  </span>
+                </div>
+
+                {/* RODAPÉ DO CARD */}
+
+                <div className="course-bottom">
+                  <span>
+                    Conhecer treinamento
+                  </span>
 
                   <ArrowRightIcon />
-                </Link>
-              ),
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-          CURSOS
-      ====================================================== */}
-
-      <section className="section courses-section">
-        <div className="container">
-          <div className="section-header">
-            <div>
-              <span className="section-kicker">
-                TREINAMENTOS EM DESTAQUE
-              </span>
-
-              <h2>
-                Conhecimento para{" "}
-                <span>
-                  avançar na sua carreira
-                </span>
-              </h2>
-
-              <p>
-                Escolha o treinamento ideal para desenvolver
-                novas competências e elevar sua atuação
-                profissional.
-              </p>
-            </div>
-
-            <Link
-              href="/todos"
-              className="view-all"
-            >
-              Ver todos os treinamentos
-
-              <ArrowRightIcon />
-            </Link>
-          </div>
-
-          <div className="courses-grid">
-            {treinamentos.map(
-              (
-                course,
-                index,
-              ) => (
-                <Link
-                  href={`/${course.slug}`}
-                  className="course-card"
-                  key={course.id}
-                  onClick={async (
-                    event,
-                  ) => {
-                    event.preventDefault();
-
-                    const destino =
-                      event.currentTarget.href;
-
-                    await registrarEventoTreinamento(
-                      {
-                        slug:
-                          course.slug,
-
-                        titulo:
-                          course.titulo,
-
-                        evento:
-                          "curso_click",
-
-                        origem:
-                          "/",
-                      },
-                    );
-
-                    window.location.href =
-                      destino;
-                  }}
-                >
-                  <div
-                    className={`course-cover course-cover-${
-                      (index % 6) + 1
-                    }`}
-                  >
-                    {course.imagem_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={
-                          course.imagem_url
-                        }
-                        alt={
-                          course.titulo
-                        }
-                        className="course-cover-image"
-                      />
-                    ) : (
-                      <>
-                        <div className="course-visual-icon">
-                          {getCourseInitials(
-                            course.titulo,
-                          )}
-                        </div>
-
-                        <div className="course-pattern" />
-                      </>
-                    )}
-
-                    {course.destaque && (
-                      <span className="course-tag">
-                        DESTAQUE
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="course-content">
-                    <div className="course-category">
-                      2BSUPPLY ACADEMY
-                    </div>
-
-                    <h3>
-                      {course.titulo}
-                    </h3>
-
-                    <p>
-                      {course.descricao ||
-                        "Conheça este treinamento e desenvolva novas competências para sua carreira profissional."}
-                    </p>
-
-                    <div className="course-info">
-                      <span>
-                        Treinamento profissional
-                      </span>
-
-                      <span>
-                        •
-                      </span>
-
-                      <span>
-                        2BSUPPLY
-                      </span>
-                    </div>
-
-                    <div className="course-bottom">
-                      <span>
-                        Conhecer treinamento
-                      </span>
-
-                      <ArrowRightIcon />
-                    </div>
-                  </div>
-                </Link>
-              ),
-            )}
-
-            {carregandoTreinamentos && (
-              <>
-                <CourseLoadingCard />
-
-                <CourseLoadingCard />
-
-                <CourseLoadingCard />
-              </>
-            )}
-
-            {!carregandoTreinamentos &&
-              treinamentos.length ===
-                0 && (
-                <div className="courses-empty">
-                  Nenhum treinamento publicado no momento.
                 </div>
-              )}
+              </div>
+            </Link>
+          );
+        },
+      )}
+
+      {/* =========================================
+          CARREGANDO
+      ========================================= */}
+
+      {carregandoTreinamentos && (
+        <>
+          <CourseLoadingCard />
+
+          <CourseLoadingCard />
+
+          <CourseLoadingCard />
+        </>
+      )}
+
+      {/* =========================================
+          SEM TREINAMENTOS
+      ========================================= */}
+
+      {!carregandoTreinamentos &&
+        treinamentos.length ===
+          0 && (
+          <div className="courses-empty">
+            Nenhum treinamento publicado no momento.
           </div>
-        </div>
-      </section>
+        )}
+    </div>
+  </div>
+</section>
 
       {/* =====================================================
           DIFERENCIAIS
@@ -860,7 +1011,7 @@ async function handleNewsletterSubmit(
 
                 <strong className="featured-column">
                   <span>
-                    2BSUPPLY
+                   NOSSOS
                   </span>
 
                   Treinamentos
@@ -991,14 +1142,26 @@ async function handleNewsletterSubmit(
                 Compras, Suprimentos e Supply Chain.
               </p>
 
-              <Link
-                href="/contato"
-                className="primary-button"
-              >
-                Falar com um especialista
+             <Link
+  href="https://api.whatsapp.com/send?phone=5521999792912" target="_blank"
+  className="primary-button"
+>
+  <svg
+    viewBox="0 0 32 32"
+    aria-hidden="true"
+    style={{
+      width: "20px",
+      height: "20px",
+      fill: "currentColor",
+      stroke: "none",
+      flexShrink: 0,
+    }}
+  >
+    <path d="M16.01 3C8.83 3 3 8.72 3 15.78c0 2.25.6 4.45 1.74 6.39L3 28.5l6.53-1.7a13.1 13.1 0 0 0 6.47 1.68h.01C23.19 28.48 29 22.76 29 15.7 29 8.65 23.19 3 16.01 3Zm0 23.32a10.9 10.9 0 0 1-5.56-1.5l-.4-.24-3.88 1.01 1.04-3.75-.26-.39a10.55 10.55 0 0 1-1.7-5.67c0-5.84 4.83-10.59 10.77-10.59 5.93 0 10.75 4.75 10.75 10.59 0 5.83-4.82 10.54-10.76 10.54Zm5.9-7.92c-.32-.16-1.91-.93-2.21-1.04-.3-.11-.52-.16-.74.16-.22.32-.85 1.04-1.04 1.25-.19.21-.38.24-.71.08-.32-.16-1.36-.49-2.59-1.57-.96-.84-1.61-1.88-1.8-2.2-.19-.32-.02-.49.14-.65.15-.14.32-.37.49-.56.16-.19.22-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.74-1.76-1.01-2.41-.27-.64-.54-.55-.74-.56h-.63c-.22 0-.57.08-.87.4-.3.32-1.15 1.12-1.15 2.73 0 1.61 1.19 3.16 1.35 3.38.16.21 2.34 3.51 5.67 4.92.79.34 1.41.54 1.89.69.79.25 1.52.21 2.09.13.64-.09 1.91-.77 2.18-1.51.27-.75.27-1.39.19-1.52-.08-.13-.3-.21-.62-.37Z" />
+  </svg>
 
-                <ArrowRightIcon />
-              </Link>
+  Falar com um especialista
+</Link>
             </div>
 
             <div className="company-features">

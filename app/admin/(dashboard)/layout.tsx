@@ -11,14 +11,13 @@ import {
   ChevronDown,
   FileText,
   GraduationCap,
+  ImageIcon,
   LayoutDashboard,
   ListChecks,
   PlusCircle,
   Settings,
   Tags,
   Users,
-  Video,
-  VideoIcon,
 } from "lucide-react";
 
 export default function AdminLayout({
@@ -43,33 +42,47 @@ export default function AdminLayout({
   ===================================================== */
 
   const menuItems = [
-    {
-      title: "Dashboard",
-      href: "/admin",
-      icon: LayoutDashboard,
-    },
-    {
-      title: "Categorias",
-      href: "/admin/categorias",
-      icon: Tags,
-    },
-{
-  title: "Depoimentos",
-  href: "/admin/depoimentos",
-  icon: Users,
-},
-    {
-      title: "Inscrições",
-      href: "/admin/inscricoes",
-      icon: GraduationCap,
-    },
-    {
-      title: "Relatórios",
-      href: "/admin/relatorios",
-      icon: ChartNoAxesCombined,
-    },
-  ];
-
+  {
+    title: "Dashboard",
+    href: "/admin",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Categorias",
+    href: "/admin/categorias",
+    icon: Tags,
+  },
+  {
+    title: "Banners",
+    href: "/admin/banners",
+    icon: ImageIcon,
+  },
+  {
+    title: "Depoimentos",
+    href: "/admin/depoimentos",
+    icon: Users,
+  },
+  {
+    title: "Inscrições",
+    href: "/admin/inscricoes",
+    icon: GraduationCap,
+  },
+  {
+    title: "Relatórios",
+    href: "/admin/relatorios",
+    icon: ChartNoAxesCombined,
+  },
+  {
+    title: "Conteúdos",
+    href: "/admin/conteudos",
+    icon: FileText,
+  },
+  {
+    title: "Configurações",
+    href: "/admin/configuracoes",
+    icon: Settings,
+  },
+];
   function isActive(href: string) {
     if (href === "/admin") {
       return pathname === "/admin";
@@ -272,127 +285,7 @@ export default function AdminLayout({
                 )}
               </div>
 
-              {/* =================================================
-                  VÍDEOS / PRÉVIAS + SUBMENU
-              ================================================= */}
-
-              <div>
-                <Link
-                  href="/admin/videos"
-                  className={`
-                    group flex items-center justify-between rounded-lg
-                    px-3 py-2.5 text-sm font-medium transition-all
-                    ${
-                      videosAberto
-                        ? "bg-emerald-50 !text-emerald-700"
-                        : "!text-[#52525b] hover:bg-[#ecfdf5] hover:!text-[#00875a]"
-                    }
-                  `}
-                >
-                  <div className="flex items-center gap-3">
-
-                    <Video
-                      size={19}
-                      strokeWidth={1.7}
-                      className={
-                        videosAberto
-                          ? "!text-emerald-600"
-                          : "!text-[#8b8b97] group-hover:!text-[#009b69]"
-                      }
-                    />
-
-                    <span>
-                      Vídeos / Prévias
-                    </span>
-
-                  </div>
-
-                  <ChevronDown
-                    size={16}
-                    className={`
-                      transition-transform duration-200
-                      ${
-                        videosAberto
-                          ? "rotate-180 text-emerald-600"
-                          : "text-zinc-400"
-                      }
-                    `}
-                  />
-                </Link>
-
-                {/* SUBMENU VÍDEOS */}
-
-                {videosAberto && (
-                  <div className="ml-[21px] mt-2 border-l-2 border-zinc-200 pl-3">
-
-                    <div className="space-y-1">
-
-                      {/* ADICIONAR VÍDEO */}
-
-                      <Link
-                        href="/admin/videos/novo"
-                        className={`
-                          group flex items-center gap-2.5 rounded-lg
-                          px-3 py-2.5 text-[13px] font-medium
-                          transition-all duration-200
-                          ${
-                            pathname === "/admin/videos/novo"
-                              ? "!bg-emerald-100 !text-emerald-800"
-                              : "!text-[#3f3f46] hover:!bg-zinc-100 hover:!text-[#18181b]"
-                          }
-                        `}
-                      >
-                        <PlusCircle
-                          size={16}
-                          strokeWidth={1.8}
-                          className={
-                            pathname === "/admin/videos/novo"
-                              ? "!text-emerald-700"
-                              : "!text-[#71717a] group-hover:!text-[#3f3f46]"
-                          }
-                        />
-
-                        <span>
-                          Adicionar vídeo
-                        </span>
-                      </Link>
-
-                      {/* VER VÍDEOS */}
-
-                      <Link
-                        href="/admin/videos"
-                        className={`
-                          group flex items-center gap-2.5 rounded-lg
-                          px-3 py-2.5 text-[13px] font-medium
-                          transition-all duration-200
-                          ${
-                            pathname === "/admin/videos"
-                              ? "!bg-emerald-100 !text-emerald-800"
-                              : "!text-[#3f3f46] hover:!bg-zinc-100 hover:!text-[#18181b]"
-                          }
-                        `}
-                      >
-                        <VideoIcon
-                          size={16}
-                          strokeWidth={1.8}
-                          className={
-                            pathname === "/admin/videos"
-                              ? "!text-emerald-700"
-                              : "!text-[#71717a] group-hover:!text-[#3f3f46]"
-                          }
-                        />
-
-                        <span>
-                          Ver vídeos
-                        </span>
-                      </Link>
-
-                    </div>
-
-                  </div>
-                )}
-              </div>
-
+            
               {/* =================================================
                   RESTANTE DO MENU
               ================================================= */}
