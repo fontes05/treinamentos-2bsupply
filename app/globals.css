@@ -169,6 +169,8 @@ svg {
 main svg{
       stroke: #acdf95;
 }
+.training-video-card svg{fill: #34ae69!important;}
+
 .testimonials-grid svg,.testimonials-slider svg{
       fill: none;
     stroke-width: 0;
