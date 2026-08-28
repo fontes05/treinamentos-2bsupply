@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import AssistantWrapper from "@/components/assistant/AssistantWrapper";
+
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -21,7 +23,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" data-theme="dark" className={cn("font-sans", geist.variable)}>
-      <body>{children}</body>
+      <body>
+        {children}
+<AssistantWrapper />
+      </body>
     </html>
   );
 }
