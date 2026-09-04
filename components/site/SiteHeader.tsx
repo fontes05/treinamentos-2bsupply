@@ -64,7 +64,7 @@ export default function SiteHeader() {
           {/* Logo para tema escuro */}
 
           <Image
-            src="/logo-2bsupply-treinamentos.png"
+            src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/treinamentos-media/logos/logo-academia-brasileira-de-suprimentos-1.png"
             alt="Academia Brasileira de Suprimentos"
             width={190}
             height={55}
@@ -75,7 +75,7 @@ export default function SiteHeader() {
           {/* Logo para tema claro */}
 
           <Image
-            src="/logo-2bsupply-treinamentos-light.png"
+            src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/treinamentos-media/logos/logo-academia-brasileira-de-suprimentos-1.png"
             alt="Academia Brasileira de Suprimentos"
             width={190}
             height={55}
