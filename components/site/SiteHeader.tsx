@@ -53,36 +53,21 @@ export default function SiteHeader() {
             LOGO
         ================================================= */}
 
-        <Link
-          href="/"
-          className="logo"
-          aria-label="Academia Brasileira de Suprimentos"
-          onClick={() =>
-            setMobileMenuOpen(false)
-          }
-        >
-          {/* Logo para tema escuro */}
-
-          <Image
-            src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/treinamentos-media/logos/logo-academia-brasileira-de-suprimentos-1.png"
-            alt="Academia Brasileira de Suprimentos"
-            width={190}
-            height={55}
-            priority
-            className="logo-image logo-dark-theme"
-          />
-
-          {/* Logo para tema claro */}
-
-          <Image
-            src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/treinamentos-media/logos/logo-academia-brasileira-de-suprimentos-1.png"
-            alt="Academia Brasileira de Suprimentos"
-            width={190}
-            height={55}
-            priority
-            className="logo-image logo-light-theme"
-          />
-        </Link>
+       <Link
+  href="/"
+  className="logo"
+  aria-label="Academia Brasileira de Suprimentos"
+  onClick={() => setMobileMenuOpen(false)}
+>
+  <Image
+    src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/treinamentos-media/logos/logo-academia-brasileira-de-suprimentos-1.png"
+    alt="Academia Brasileira de Suprimentos"
+    width={190}
+    height={70}
+    priority
+    className="logo-image"
+  />
+</Link>
 
 
         {/* =================================================
