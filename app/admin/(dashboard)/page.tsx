@@ -54,6 +54,14 @@ import {
    TIPOS
 ========================================================= */
 
+type RelatorioDashboardRPC = {
+  curso_slug: string | null;
+  curso_titulo: string | null;
+  cliques_curso: number | string | null;
+  cliques_inscricao: number | string | null;
+  cliques_previa: number | string | null;
+};
+
 type Curso = {
   id: string;
   titulo: string;
@@ -69,10 +77,10 @@ type Categoria = {
   nome: string;
 };
 
-type EventoAnalytics = {
-  curso_slug: string | null;
-  curso_titulo: string | null;
-  created_at: string;
+type GraficoInscricao = {
+  key: string;
+  mes: string;
+  inscricoes: number;
 };
 
 type CursoVisitado = {
@@ -95,110 +103,255 @@ type Metricas = {
   previas: number;
 };
 
+type MesGrafico = {
+  key: string;
+  mes: string;
+  inicioISO: string;
+  fimISO: string;
+};
+
 /* =========================================================
    HELPERS
 ========================================================= */
 
-function formatarData(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "America/Sao_Paulo",
-  }).format(new Date(value));
-}
-
-function formatarDataHora(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "America/Sao_Paulo",
-  }).format(new Date(value));
-}
-
-function formatarDataCurta(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    timeZone: "America/Sao_Paulo",
-  })
-    .format(new Date(value))
-    .replace(".", "");
-}
-
-/* ---------------------------------------------------------
-   CHAVE DO MÊS
---------------------------------------------------------- */
-
-function getMonthKey(value: Date | string) {
-  const date =
-    typeof value === "string"
-      ? new Date(value)
-      : value;
-
-  const parts =
-    new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
+function formatarData(
+  value: string
+) {
+  return new Intl.DateTimeFormat(
+    "pt-BR",
+    {
+      day: "2-digit",
       month: "2-digit",
-      timeZone: "America/Sao_Paulo",
-    }).formatToParts(date);
-
-  const year =
-    parts.find(
-      (part) =>
-        part.type === "year"
-    )?.value ?? "";
-
-  const month =
-    parts.find(
-      (part) =>
-        part.type === "month"
-    )?.value ?? "";
-
-  return `${year}-${month}`;
+      year: "numeric",
+      timeZone:
+        "America/Sao_Paulo",
+    }
+  ).format(
+    new Date(value)
+  );
 }
 
-/* ---------------------------------------------------------
-   ÚLTIMOS 6 MESES
---------------------------------------------------------- */
+function formatarDataHora(
+  value: string
+) {
+  return new Intl.DateTimeFormat(
+    "pt-BR",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone:
+        "America/Sao_Paulo",
+    }
+  ).format(
+    new Date(value)
+  );
+}
 
-function gerarUltimosSeisMeses() {
-  const hoje = new Date();
+function formatarDataCurta(
+  value: string
+) {
+  return new Intl.DateTimeFormat(
+    "pt-BR",
+    {
+      day: "2-digit",
+      month: "short",
+      timeZone:
+        "America/Sao_Paulo",
+    }
+  )
+    .format(
+      new Date(value)
+    )
+    .replace(
+      ".",
+      ""
+    );
+}
+
+/* =========================================================
+   DATAS DO GRÁFICO
+========================================================= */
+
+function dataInicioISO(
+  value: string
+) {
+  return new Date(
+    `${value}T00:00:00-03:00`
+  ).toISOString();
+}
+
+function dataFimISO(
+  value: string
+) {
+  return new Date(
+    `${value}T23:59:59.999-03:00`
+  ).toISOString();
+}
+
+/* =========================================================
+   ÚLTIMOS 6 MESES
+========================================================= */
+
+function gerarUltimosSeisMeses():
+  MesGrafico[] {
+  const agora =
+    new Date();
+
+  /*
+   * Descobre ano e mês atuais
+   * considerando horário de São Paulo.
+   */
+
+  const partes =
+    new Intl.DateTimeFormat(
+      "en-US",
+      {
+        timeZone:
+          "America/Sao_Paulo",
+        year: "numeric",
+        month: "2-digit",
+      }
+    ).formatToParts(
+      agora
+    );
+
+  const anoAtual =
+    Number(
+      partes.find(
+        (parte) =>
+          parte.type ===
+          "year"
+      )?.value ??
+        agora.getFullYear()
+    );
+
+  const mesAtual =
+    Number(
+      partes.find(
+        (parte) =>
+          parte.type ===
+          "month"
+      )?.value ??
+        agora.getMonth() + 1
+    );
 
   return Array.from(
     {
       length: 6,
     },
-    (_, index) => {
-      const date =
+    (
+      _,
+      index
+    ) => {
+      /*
+       * Exemplo em setembro:
+       *
+       * Abr
+       * Mai
+       * Jun
+       * Jul
+       * Ago
+       * Set
+       */
+
+      const deslocamento =
+        5 - index;
+
+      const referencia =
         new Date(
-          hoje.getFullYear(),
-          hoje.getMonth() -
-            (5 - index),
-          1
+          Date.UTC(
+            anoAtual,
+            mesAtual -
+              1 -
+              deslocamento,
+            1,
+            12,
+            0,
+            0
+          )
         );
+
+      const ano =
+        referencia.getUTCFullYear();
+
+      const mesNumero =
+        referencia.getUTCMonth() +
+        1;
+
+      const ultimoDia =
+        new Date(
+          Date.UTC(
+            ano,
+            mesNumero,
+            0,
+            12,
+            0,
+            0
+          )
+        ).getUTCDate();
+
+      const mesString =
+        String(
+          mesNumero
+        ).padStart(
+          2,
+          "0"
+        );
+
+      const ultimoDiaString =
+        String(
+          ultimoDia
+        ).padStart(
+          2,
+          "0"
+        );
+
+      const dataInicio =
+        `${ano}-${mesString}-01`;
+
+      const dataFim =
+        `${ano}-${mesString}-${ultimoDiaString}`;
 
       const label =
         new Intl.DateTimeFormat(
           "pt-BR",
           {
-            month: "short",
+            month:
+              "short",
             timeZone:
-              "America/Sao_Paulo",
+              "UTC",
           }
         )
-          .format(date)
-          .replace(".", "");
+          .format(
+            referencia
+          )
+          .replace(
+            ".",
+            ""
+          );
 
       return {
-        key: getMonthKey(date),
+        key:
+          `${ano}-${mesString}`,
+
         mes:
-          label.charAt(0).toUpperCase() +
+          label
+            .charAt(0)
+            .toUpperCase() +
           label.slice(1),
-        inscricoes: 0,
+
+        inicioISO:
+          dataInicioISO(
+            dataInicio
+          ),
+
+        fimISO:
+          dataFimISO(
+            dataFim
+          ),
       };
     }
   );
@@ -209,81 +362,105 @@ function gerarUltimosSeisMeses() {
 ========================================================= */
 
 export default function AdminDashboardPage() {
-  const supabase = useMemo(
-    () => createClient(),
-    []
-  );
+  const supabase =
+    useMemo(
+      () =>
+        createClient(),
+      []
+    );
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(
+      true
+    );
 
-  const [erro, setErro] =
-    useState("");
+  const [
+    erro,
+    setErro,
+  ] =
+    useState(
+      ""
+    );
 
-  const [cursos, setCursos] =
-    useState<Curso[]>([]);
+  const [
+    cursos,
+    setCursos,
+  ] =
+    useState<
+      Curso[]
+    >(
+      []
+    );
 
   const [
     metricas,
     setMetricas,
-  ] = useState<Metricas>({
-    inscricoes: 0,
-    visitas: 0,
-    previas: 0,
-  });
+  ] =
+    useState<Metricas>(
+      {
+        inscricoes: 0,
+        visitas: 0,
+        previas: 0,
+      }
+    );
 
   const [
     cursosMaisVisitados,
     setCursosMaisVisitados,
-  ] = useState<
-    CursoVisitado[]
-  >([]);
+  ] =
+    useState<
+      CursoVisitado[]
+    >(
+      []
+    );
 
   const [
     ultimasInscricoes,
     setUltimasInscricoes,
-  ] = useState<
-    UltimaInscricao[]
-  >([]);
+  ] =
+    useState<
+      UltimaInscricao[]
+    >(
+      []
+    );
 
   const [
     inscricoesGrafico,
     setInscricoesGrafico,
-  ] = useState<
-    EventoAnalytics[]
-  >([]);
+  ] =
+    useState<
+      GraficoInscricao[]
+    >(
+      []
+    );
 
   /* =======================================================
      CARREGAR DASHBOARD
   ======================================================= */
 
   useEffect(() => {
-    let ativo = true;
+    let ativo =
+      true;
 
     async function carregarDashboard() {
-      setLoading(true);
-      setErro("");
+      setLoading(
+        true
+      );
+
+      setErro(
+        ""
+      );
 
       try {
         /* ===============================================
-           DATA INICIAL DO GRÁFICO
+           MESES DO GRÁFICO
         =============================================== */
 
-        const inicioGrafico =
-          new Date();
-
-        inicioGrafico.setDate(1);
-        inicioGrafico.setHours(
-          0,
-          0,
-          0,
-          0
-        );
-
-        inicioGrafico.setMonth(
-          inicioGrafico.getMonth() -
-            5
-        );
+        const mesesGrafico =
+          gerarUltimosSeisMeses();
 
         /* ===============================================
            CONSULTAS
@@ -292,164 +469,160 @@ export default function AdminDashboardPage() {
         const [
           cursosResponse,
           categoriasResponse,
-          inscricoesCountResponse,
-          visitasCountResponse,
-          previasCountResponse,
-          visitasResponse,
+          relatorioResponse,
           ultimasInscricoesResponse,
-          graficoResponse,
-        ] = await Promise.all([
-          /* CURSOS */
+          graficoResponses,
+        ] =
+          await Promise.all(
+            [
+              /* =========================================
+                 CURSOS
+              ========================================= */
 
-          supabase
-            .from(
-              "treinamentos_cursos"
-            )
-            .select(`
-              id,
-              titulo,
-              slug,
-              categoria_id,
-              status,
-              destaque,
-              created_at
-            `)
-            .order(
-              "created_at",
-              {
-                ascending: false,
-              }
-            ),
+              supabase
+                .from(
+                  "treinamentos_cursos"
+                )
+                .select(`
+                  id,
+                  titulo,
+                  slug,
+                  categoria_id,
+                  status,
+                  destaque,
+                  created_at
+                `)
+                .order(
+                  "created_at",
+                  {
+                    ascending:
+                      false,
+                  }
+                ),
 
-          /* CATEGORIAS */
+              /* =========================================
+                 CATEGORIAS
+              ========================================= */
 
-          supabase
-            .from(
-              "treinamentos_categorias"
-            )
-            .select(`
-              id,
-              nome
-            `),
+              supabase
+                .from(
+                  "treinamentos_categorias"
+                )
+                .select(`
+                  id,
+                  nome
+                `),
 
-          /* TOTAL CLIQUES INSCRIÇÃO */
+              /* =========================================
+                 TOTAIS / RELATÓRIO
 
-          supabase
-            .from(
-              "treinamentos_analytics"
-            )
-            .select("*", {
-              count: "exact",
-              head: true,
-            })
-            .eq(
-              "evento",
-              "inscricao_click"
-            ),
+                 Mesma origem de /admin/relatorios
+              ========================================= */
 
-          /* TOTAL VISITAS */
+              supabase.rpc(
+                "treinamentos_relatorios_admin"
+              ),
 
-          supabase
-            .from(
-              "treinamentos_analytics"
-            )
-            .select("*", {
-              count: "exact",
-              head: true,
-            })
-            .eq(
-              "evento",
-              "curso_click"
-            ),
+              /* =========================================
+                 ÚLTIMAS INSCRIÇÕES
+              ========================================= */
 
-          /* TOTAL PRÉVIAS */
+              supabase
+                .from(
+                  "treinamentos_analytics"
+                )
+                .select(`
+                  curso_slug,
+                  curso_titulo,
+                  created_at
+                `)
+                .eq(
+                  "evento",
+                  "inscricao_click"
+                )
+                .order(
+                  "created_at",
+                  {
+                    ascending:
+                      false,
+                  }
+                )
+                .limit(
+                  5
+                ),
 
-          supabase
-            .from(
-              "treinamentos_analytics"
-            )
-            .select("*", {
-              count: "exact",
-              head: true,
-            })
-            .eq(
-              "evento",
-              "previa_click"
-            ),
+              /* =========================================
+                 GRÁFICO
 
-          /* VISITAS PARA RANKING */
+                 Faz uma consulta por mês usando
+                 a RPC que já funciona nos relatórios.
+              ========================================= */
 
-          supabase
-            .from(
-              "treinamentos_analytics"
-            )
-.select(`
-  curso_slug,
-  curso_titulo,
-  created_at
-`)
-            .eq(
-              "evento",
-              "curso_click"
-            ),
+              Promise.all(
+                mesesGrafico.map(
+                  (
+                    mes
+                  ) =>
+                    supabase.rpc(
+                      "treinamentos_relatorios_admin_periodo",
+                      {
+                        p_data_inicio:
+                          mes.inicioISO,
 
-          /* ÚLTIMAS INSCRIÇÕES */
+                        p_data_fim:
+                          mes.fimISO,
+                      }
+                    )
+                )
+              ),
+            ]
+          );
 
-         supabase
-  .from("treinamentos_analytics")
-  .select(`
-    curso_slug,
-    curso_titulo,
-    created_at
-  `)
-  .eq(
-    "evento",
-    "inscricao_click"
-  )
-  .order(
-    "created_at",
-    {
-      ascending: false,
-    }
-  )
-  .limit(5),
+        /* ===============================================
+           ERRO DO GRÁFICO
+        =============================================== */
 
-          /* GRÁFICO */
-
-supabase
-  .from("treinamentos_analytics")
-  .select(`
-    curso_slug,
-    curso_titulo,
-    created_at
-  `)
-  .eq(
-    "evento",
-    "inscricao_click"
-  )
-  .gte(
-    "created_at",
-    inicioGrafico.toISOString()
-  ),
-        ]);
+        const erroGrafico =
+          graficoResponses.find(
+            (
+              response
+            ) =>
+              response.error
+          )?.error ??
+          null;
 
         /* ===============================================
            ERROS PRINCIPAIS
         =============================================== */
 
-        const primeiroErro = [
-          cursosResponse.error,
-          inscricoesCountResponse.error,
-          visitasCountResponse.error,
-          previasCountResponse.error,
-          visitasResponse.error,
-          ultimasInscricoesResponse.error,
-          graficoResponse.error,
-        ].find(Boolean);
+        const primeiroErro =
+          [
+            cursosResponse.error,
+            relatorioResponse.error,
+            erroGrafico,
+          ].find(
+            Boolean
+          );
 
-        if (primeiroErro) {
+        if (
+          primeiroErro
+        ) {
           throw new Error(
             primeiroErro.message
+          );
+        }
+
+        /*
+         * Últimas inscrições não impede
+         * o restante do dashboard de carregar.
+         */
+
+        if (
+          ultimasInscricoesResponse.error
+        ) {
+          console.error(
+            "Erro ao carregar últimas inscrições:",
+            ultimasInscricoesResponse.error
           );
         }
 
@@ -462,7 +635,9 @@ supabase
           );
         }
 
-        if (!ativo) {
+        if (
+          !ativo
+        ) {
           return;
         }
 
@@ -471,34 +646,84 @@ supabase
         =============================================== */
 
         const listaCursos =
-          (cursosResponse.data ??
-            []) as Curso[];
+          (
+            cursosResponse.data ??
+            []
+          ) as Curso[];
 
         const listaCategorias =
-          (categoriasResponse.data ??
-            []) as Categoria[];
+          (
+            categoriasResponse.data ??
+            []
+          ) as Categoria[];
 
         setCursos(
           listaCursos
         );
 
         /* ===============================================
+           RELATÓRIO ANALYTICS
+        =============================================== */
+
+        const relatorioAnalytics =
+          (
+            relatorioResponse.data ??
+            []
+          ) as RelatorioDashboardRPC[];
+
+        /* ===============================================
+           TOTAIS
+        =============================================== */
+
+        const totaisAnalytics =
+          relatorioAnalytics.reduce(
+            (
+              total,
+              item
+            ) => {
+              total.visitas +=
+                Number(
+                  item.cliques_curso ??
+                    0
+                );
+
+              total.inscricoes +=
+                Number(
+                  item.cliques_inscricao ??
+                    0
+                );
+
+              total.previas +=
+                Number(
+                  item.cliques_previa ??
+                    0
+                );
+
+              return total;
+            },
+            {
+              visitas: 0,
+              inscricoes: 0,
+              previas: 0,
+            }
+          );
+
+        /* ===============================================
            MÉTRICAS
         =============================================== */
 
-        setMetricas({
-          inscricoes:
-            inscricoesCountResponse.count ??
-            0,
+        setMetricas(
+          {
+            inscricoes:
+              totaisAnalytics.inscricoes,
 
-          visitas:
-            visitasCountResponse.count ??
-            0,
+            visitas:
+              totaisAnalytics.visitas,
 
-          previas:
-            previasCountResponse.count ??
-            0,
-        });
+            previas:
+              totaisAnalytics.previas,
+          }
+        );
 
         /* ===============================================
            MAP DE CATEGORIAS
@@ -511,7 +736,9 @@ supabase
           >();
 
         listaCategorias.forEach(
-          (categoria) => {
+          (
+            categoria
+          ) => {
             categoriaMap.set(
               categoria.id,
               categoria.nome
@@ -530,7 +757,9 @@ supabase
           >();
 
         listaCursos.forEach(
-          (curso) => {
+          (
+            curso
+          ) => {
             cursoMap.set(
               curso.slug,
               curso
@@ -542,57 +771,23 @@ supabase
            CURSOS MAIS VISITADOS
         =============================================== */
 
-        const visitas =
-          (visitasResponse.data ??
-            []) as EventoAnalytics[];
-
-        const contagem =
-          new Map<
-            string,
-            {
-              titulo: string;
-              visitas: number;
-            }
-          >();
-
-        visitas.forEach(
-  (evento) => {
-    if (!evento.curso_slug) {
-      return;
-    }
-
-    const atual =
-      contagem.get(
-        evento.curso_slug
-      );
-
-    if (atual) {
-      atual.visitas += 1;
-      return;
-    }
-
-    contagem.set(
-      evento.curso_slug,
-      {
-        titulo:
-          evento.curso_titulo ||
-          evento.curso_slug,
-
-        visitas: 1,
-      }
-    );
-  }
-);
-
         const ranking =
-          Array.from(
-            contagem.entries()
-          )
+          relatorioAnalytics
+            .filter(
+              (
+                item
+              ) =>
+                Boolean(
+                  item.curso_slug
+                )
+            )
             .map(
-              ([
-                slug,
-                analytics,
-              ]) => {
+              (
+                item
+              ) => {
+                const slug =
+                  item.curso_slug as string;
+
                 const curso =
                   cursoMap.get(
                     slug
@@ -603,10 +798,14 @@ supabase
 
                   titulo:
                     curso?.titulo ||
-                    analytics.titulo,
+                    item.curso_titulo ||
+                    slug,
 
                   visitas:
-                    analytics.visitas,
+                    Number(
+                      item.cliques_curso ??
+                        0
+                    ),
 
                   status:
                     curso?.status ||
@@ -622,8 +821,18 @@ supabase
                 };
               }
             )
+            .filter(
+              (
+                curso
+              ) =>
+                curso.visitas >
+                0
+            )
             .sort(
-              (a, b) =>
+              (
+                a,
+                b
+              ) =>
                 b.visitas -
                 a.visitas
             )
@@ -640,64 +849,126 @@ supabase
            ÚLTIMAS INSCRIÇÕES
         =============================================== */
 
-       const listaUltimas =
-  (
-    ultimasInscricoesResponse.data ??
-    []
-  )
-    .filter(
-      (item) =>
-        Boolean(
-          item.curso_slug
-        )
-    )
-    .map(
-      (item) => ({
-        titulo:
-          item.curso_titulo ||
-          item.curso_slug ||
-          "Treinamento",
+        if (
+          !ultimasInscricoesResponse.error
+        ) {
+          const listaUltimas =
+            (
+              ultimasInscricoesResponse.data ??
+              []
+            )
+              .filter(
+                (
+                  item
+                ) =>
+                  Boolean(
+                    item.curso_slug
+                  )
+              )
+              .map(
+                (
+                  item
+                ) => ({
+                  titulo:
+                    item.curso_titulo ||
+                    item.curso_slug ||
+                    "Treinamento",
 
-        slug:
-          item.curso_slug as string,
+                  slug:
+                    item.curso_slug as string,
 
-        created_at:
-          item.created_at,
-      })
-    );
+                  created_at:
+                    item.created_at,
+                })
+              );
 
-setUltimasInscricoes(
-  listaUltimas
-);
+          setUltimasInscricoes(
+            listaUltimas
+          );
+        } else {
+          setUltimasInscricoes(
+            []
+          );
+        }
 
         /* ===============================================
-           GRÁFICO
+           GRÁFICO - INSCRIÇÕES POR MÊS
         =============================================== */
 
+        const dadosGrafico:
+          GraficoInscricao[] =
+          mesesGrafico.map(
+            (
+              mes,
+              index
+            ) => {
+              const response =
+                graficoResponses[
+                  index
+                ];
+
+              const dadosMes =
+                (
+                  response?.data ??
+                  []
+                ) as RelatorioDashboardRPC[];
+
+              const inscricoes =
+                dadosMes.reduce(
+                  (
+                    total,
+                    item
+                  ) =>
+                    total +
+                    Number(
+                      item.cliques_inscricao ??
+                        0
+                    ),
+                  0
+                );
+
+              return {
+                key:
+                  mes.key,
+
+                mes:
+                  mes.mes,
+
+                inscricoes,
+              };
+            }
+          );
+
         setInscricoesGrafico(
-          (
-            graficoResponse.data ??
-            []
-          ) as EventoAnalytics[]
+          dadosGrafico
         );
-      } catch (error) {
+      } catch (
+        error
+      ) {
         console.error(
           "Erro ao carregar dashboard:",
           error
         );
 
-        if (!ativo) {
+        if (
+          !ativo
+        ) {
           return;
         }
 
         setErro(
-          error instanceof Error
+          error instanceof
+            Error
             ? error.message
             : "Não foi possível carregar o dashboard."
         );
       } finally {
-        if (ativo) {
-          setLoading(false);
+        if (
+          ativo
+        ) {
+          setLoading(
+            false
+          );
         }
       }
     }
@@ -705,9 +976,12 @@ setUltimasInscricoes(
     void carregarDashboard();
 
     return () => {
-      ativo = false;
+      ativo =
+        false;
     };
-  }, [supabase]);
+  }, [
+    supabase,
+  ]);
 
   /* =======================================================
      DADOS DOS CURSOS
@@ -717,90 +991,75 @@ setUltimasInscricoes(
     useMemo(
       () =>
         cursos.filter(
-          (curso) =>
+          (
+            curso
+          ) =>
             curso.status ===
             "publicado"
         ).length,
-      [cursos]
+      [
+        cursos,
+      ]
     );
 
   const cursosRascunho =
     useMemo(
       () =>
         cursos.filter(
-          (curso) =>
+          (
+            curso
+          ) =>
             curso.status ===
             "rascunho"
         ).length,
-      [cursos]
+      [
+        cursos,
+      ]
     );
 
   const cursosDestaque =
     useMemo(
       () =>
         cursos.filter(
-          (curso) =>
+          (
+            curso
+          ) =>
             curso.destaque
         ).length,
-      [cursos]
+      [
+        cursos,
+      ]
     );
 
   const cursoMaisRecente =
-    cursos[0] ?? null;
+    cursos[
+      0
+    ] ??
+    null;
 
   /* =======================================================
      GRÁFICO
   ======================================================= */
 
   const chartData =
-    useMemo(() => {
-      const meses =
-        gerarUltimosSeisMeses();
+    inscricoesGrafico;
 
-      const mapa =
-        new Map(
-          meses.map(
-            (item) => [
-              item.key,
-              0,
-            ]
-          )
-        );
-
-      inscricoesGrafico.forEach(
-        (evento) => {
-          const key =
-            getMonthKey(
-              evento.created_at
-            );
-
-          if (
-            !mapa.has(key)
-          ) {
-            return;
-          }
-
-          mapa.set(
-            key,
-            (mapa.get(key) ?? 0) +
-              1
-          );
-        }
-      );
-
-      return meses.map(
-        (item) => ({
-          ...item,
-
-          inscricoes:
-            mapa.get(
-              item.key
-            ) ?? 0,
-        })
-      );
-    }, [
-      inscricoesGrafico,
-    ]);
+  const totalInscricoesGrafico =
+    useMemo(
+      () =>
+        inscricoesGrafico.reduce(
+          (
+            total,
+            item
+          ) =>
+            total +
+            item.inscricoes,
+          0
+        ),
+      [
+        inscricoesGrafico,
+      ]
+    );
 
   /* =======================================================
      RENDER
@@ -808,11 +1067,13 @@ setUltimasInscricoes(
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-7">
+
       {/* =====================================================
           CABEÇALHO
       ====================================================== */}
 
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+
         <div>
           <p className="text-sm font-medium text-emerald-600">
             Visão geral
@@ -823,25 +1084,29 @@ setUltimasInscricoes(
           </h2>
 
           <p className="mt-2 text-sm text-zinc-500">
-            Acompanhe o desempenho dos treinamentos e as últimas
-            movimentações.
+            Acompanhe o desempenho dos treinamentos e as últimas movimentações.
           </p>
         </div>
 
-       <Link
-  href="/admin/treinamentos/novo"
-  className="
-    inline-flex h-9 items-center justify-center gap-2
-    rounded-md bg-emerald-600 px-4
-    text-sm font-medium text-white
-    transition-colors
-    hover:bg-emerald-700
-  "
->
-  <BookOpen size={17} />
+        <Link
+          href="/admin/treinamentos/novo"
+          className="
+            inline-flex h-9 items-center justify-center gap-2
+            rounded-md bg-emerald-600 px-4
+            text-sm font-medium text-white
+            transition-colors
+            hover:bg-emerald-700
+          "
+        >
+          <BookOpen
+            size={
+              17
+            }
+          />
 
-  Novo curso
-</Link>
+          Novo curso
+        </Link>
+
       </div>
 
       {/* =====================================================
@@ -850,8 +1115,7 @@ setUltimasInscricoes(
 
       {erro && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          Não foi possível carregar alguns dados do Dashboard:
-          {" "}
+          Não foi possível carregar alguns dados do Dashboard:{" "}
           {erro}
         </div>
       )}
@@ -861,6 +1125,7 @@ setUltimasInscricoes(
       ====================================================== */}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
         <MetricCard
           title="Cursos publicados"
           value={
@@ -877,7 +1142,9 @@ setUltimasInscricoes(
           }
           icon={
             <BookOpen
-              size={20}
+              size={
+                20
+              }
             />
           }
         />
@@ -894,7 +1161,9 @@ setUltimasInscricoes(
           description="cliques nos links de inscrição"
           icon={
             <GraduationCap
-              size={20}
+              size={
+                20
+              }
             />
           }
         />
@@ -911,7 +1180,9 @@ setUltimasInscricoes(
           description="acessos registrados aos cursos"
           icon={
             <Eye
-              size={20}
+              size={
+                20
+              }
             />
           }
         />
@@ -928,10 +1199,13 @@ setUltimasInscricoes(
           description="cliques para visualizar a prévia"
           icon={
             <MousePointerClick
-              size={20}
+              size={
+                20
+              }
             />
           }
         />
+
       </div>
 
       {/* =====================================================
@@ -939,10 +1213,15 @@ setUltimasInscricoes(
       ====================================================== */}
 
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        {/* GRÁFICO */}
+
+        {/* ===================================================
+            GRÁFICO
+        ==================================================== */}
 
         <Card className="border-zinc-200 shadow-sm">
+
           <CardHeader className="flex flex-row items-start justify-between">
+
             <div>
               <CardTitle className="text-base">
                 Inscrições nos treinamentos
@@ -959,32 +1238,44 @@ setUltimasInscricoes(
             >
               {loading
                 ? "..."
-                : `${inscricoesGrafico.length} cliques`}
+                : `${totalInscricoesGrafico} ${
+                    totalInscricoesGrafico ===
+                    1
+                      ? "clique"
+                      : "cliques"
+                  }`}
             </Badge>
+
           </CardHeader>
 
           <CardContent>
+
             <div className="h-[320px] w-full">
+
               {loading ? (
                 <div className="flex h-full items-center justify-center">
+
                   <LoaderCircle className="h-6 w-6 animate-spin text-emerald-600" />
+
                 </div>
               ) : (
                 <ResponsiveContainer
                   width="100%"
                   height="100%"
                 >
+
                   <AreaChart
                     data={
                       chartData
                     }
                     margin={{
-                      top: 10,
-                      right: 10,
+                      top: 15,
+                      right: 15,
                       left: -20,
                       bottom: 0,
                     }}
                   >
+
                     <defs>
                       <linearGradient
                         id="inscricoesGradient"
@@ -997,7 +1288,7 @@ setUltimasInscricoes(
                           offset="5%"
                           stopColor="#059669"
                           stopOpacity={
-                            0.25
+                            0.30
                           }
                         />
 
@@ -1045,6 +1336,17 @@ setUltimasInscricoes(
                       allowDecimals={
                         false
                       }
+                      domain={[
+                        0,
+                        (
+                          dataMax:
+                            number
+                        ) =>
+                          Math.max(
+                            1,
+                            dataMax
+                          ),
+                      ]}
                     />
 
                     <Tooltip
@@ -1055,6 +1357,21 @@ setUltimasInscricoes(
                         strokeDasharray:
                           "4 4",
                       }}
+                      formatter={(
+                        value
+                      ) => [
+                        `${Number(
+                          value
+                        )} ${
+                          Number(
+                            value
+                          ) ===
+                          1
+                            ? "clique"
+                            : "cliques"
+                        }`,
+                        "Inscrições",
+                      ]}
                     />
 
                     <Area
@@ -1065,18 +1382,39 @@ setUltimasInscricoes(
                         2.5
                       }
                       fill="url(#inscricoesGradient)"
+                      dot={{
+                        r: 4,
+                        fill:
+                          "#059669",
+                        stroke:
+                          "#ffffff",
+                        strokeWidth:
+                          2,
+                      }}
+                      activeDot={{
+                        r: 6,
+                      }}
                     />
+
                   </AreaChart>
+
                 </ResponsiveContainer>
               )}
+
             </div>
+
           </CardContent>
+
         </Card>
 
-        {/* RESUMO */}
+        {/* ===================================================
+            RESUMO
+        ==================================================== */}
 
         <Card className="border-zinc-200 shadow-sm">
+
           <CardHeader>
+
             <CardTitle className="text-base">
               Resumo rápido
             </CardTitle>
@@ -1084,9 +1422,11 @@ setUltimasInscricoes(
             <CardDescription>
               Indicadores dos treinamentos.
             </CardDescription>
+
           </CardHeader>
 
           <CardContent className="space-y-5">
+
             <SummaryItem
               label="Cursos publicados"
               value={
@@ -1140,8 +1480,11 @@ setUltimasInscricoes(
                   : "Nenhum curso cadastrado"
               }
             />
+
           </CardContent>
+
         </Card>
+
       </div>
 
       {/* =====================================================
@@ -1149,12 +1492,15 @@ setUltimasInscricoes(
       ====================================================== */}
 
       <div className="grid gap-6 xl:grid-cols-2">
+
         {/* ===================================================
             CURSOS MAIS VISITADOS
         ==================================================== */}
 
         <Card className="border-zinc-200 shadow-sm">
+
           <CardHeader className="flex flex-row items-center justify-between">
+
             <div>
               <CardTitle className="text-base">
                 Cursos mais visitados
@@ -1166,30 +1512,39 @@ setUltimasInscricoes(
             </div>
 
             <Link
-  href="/admin/relatorios"
-  className="
-    inline-flex h-9 items-center justify-center gap-2
-    rounded-md px-3
-    text-sm font-medium text-zinc-700
-    transition-colors
-    hover:bg-zinc-100
-    hover:text-zinc-950
-  "
->
-  Ver todos
+              href="/admin/relatorios"
+              className="
+                inline-flex h-9 items-center justify-center gap-2
+                rounded-md px-3
+                text-sm font-medium text-zinc-700
+                transition-colors
+                hover:bg-zinc-100
+                hover:text-zinc-950
+              "
+            >
+              Ver todos
 
-  <ArrowUpRight size={15} />
-</Link>
+              <ArrowUpRight
+                size={
+                  15
+                }
+              />
+            </Link>
+
           </CardHeader>
 
           <CardContent>
+
             {loading ? (
               <div className="flex min-h-[220px] items-center justify-center">
+
                 <LoaderCircle className="h-6 w-6 animate-spin text-emerald-600" />
+
               </div>
             ) : cursosMaisVisitados.length ===
               0 ? (
               <div className="flex min-h-[220px] flex-col items-center justify-center text-center">
+
                 <Eye className="mb-3 h-8 w-8 text-zinc-300" />
 
                 <p className="text-sm font-medium text-zinc-700">
@@ -1199,11 +1554,15 @@ setUltimasInscricoes(
                 <p className="mt-1 text-xs text-zinc-500">
                   Os acessos aos cursos aparecerão aqui.
                 </p>
+
               </div>
             ) : (
               <Table>
+
                 <TableHeader>
+
                   <TableRow>
+
                     <TableHead>
                       Curso
                     </TableHead>
@@ -1215,19 +1574,27 @@ setUltimasInscricoes(
                     <TableHead>
                       Status
                     </TableHead>
+
                   </TableRow>
+
                 </TableHeader>
 
                 <TableBody>
+
                   {cursosMaisVisitados.map(
-                    (curso) => (
+                    (
+                      curso
+                    ) => (
                       <TableRow
                         key={
                           curso.slug
                         }
                       >
+
                         <TableCell>
+
                           <div>
+
                             <Link
                               href={`/cursos/${curso.slug}`}
                               className="font-medium text-zinc-900 transition hover:text-emerald-600"
@@ -1242,7 +1609,9 @@ setUltimasInscricoes(
                                 curso.categoria
                               }
                             </p>
+
                           </div>
+
                         </TableCell>
 
                         <TableCell className="font-medium text-zinc-800">
@@ -1258,13 +1627,18 @@ setUltimasInscricoes(
                             }
                           />
                         </TableCell>
+
                       </TableRow>
                     )
                   )}
+
                 </TableBody>
+
               </Table>
             )}
+
           </CardContent>
+
         </Card>
 
         {/* ===================================================
@@ -1272,7 +1646,9 @@ setUltimasInscricoes(
         ==================================================== */}
 
         <Card className="border-zinc-200 shadow-sm">
+
           <CardHeader className="flex flex-row items-center justify-between">
+
             <div>
               <CardTitle className="text-base">
                 Últimas inscrições
@@ -1284,30 +1660,39 @@ setUltimasInscricoes(
             </div>
 
             <Link
-  href="/admin/relatorios"
-  className="
-    inline-flex h-9 items-center justify-center gap-2
-    rounded-md px-3
-    text-sm font-medium text-zinc-700
-    transition-colors
-    hover:bg-zinc-100
-    hover:text-zinc-950
-  "
->
-  Ver todas
+              href="/admin/relatorios"
+              className="
+                inline-flex h-9 items-center justify-center gap-2
+                rounded-md px-3
+                text-sm font-medium text-zinc-700
+                transition-colors
+                hover:bg-zinc-100
+                hover:text-zinc-950
+              "
+            >
+              Ver todas
 
-  <ArrowUpRight size={15} />
-</Link>
+              <ArrowUpRight
+                size={
+                  15
+                }
+              />
+            </Link>
+
           </CardHeader>
 
           <CardContent>
+
             {loading ? (
               <div className="flex min-h-[220px] items-center justify-center">
+
                 <LoaderCircle className="h-6 w-6 animate-spin text-emerald-600" />
+
               </div>
             ) : ultimasInscricoes.length ===
               0 ? (
               <div className="flex min-h-[220px] flex-col items-center justify-center text-center">
+
                 <GraduationCap className="mb-3 h-8 w-8 text-zinc-300" />
 
                 <p className="text-sm font-medium text-zinc-700">
@@ -1317,9 +1702,11 @@ setUltimasInscricoes(
                 <p className="mt-1 text-xs text-zinc-500">
                   Os cliques nos links de inscrição aparecerão aqui.
                 </p>
+
               </div>
             ) : (
               <div className="space-y-1">
+
                 {ultimasInscricoes.map(
                   (
                     inscricao,
@@ -1329,16 +1716,21 @@ setUltimasInscricoes(
                       key={`${inscricao.slug}-${inscricao.created_at}-${index}`}
                       className="flex items-center justify-between gap-4 rounded-lg px-2 py-3 transition hover:bg-zinc-50"
                     >
+
                       <div className="flex min-w-0 items-center gap-3">
+
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+
                           <MousePointerClick
                             size={
                               18
                             }
                           />
+
                         </div>
 
                         <div className="min-w-0">
+
                           <Link
                             href={`/cursos/${inscricao.slug}`}
                             className="block truncate text-sm font-medium text-zinc-900 transition hover:text-emerald-600"
@@ -1351,11 +1743,15 @@ setUltimasInscricoes(
                           <p className="mt-0.5 truncate text-xs text-zinc-500">
                             Clique no link de inscrição
                           </p>
+
                         </div>
+
                       </div>
 
                       <div className="shrink-0 text-right">
+
                         <div className="flex items-center justify-end gap-1 text-xs font-medium text-zinc-600">
+
                           <Clock
                             size={
                               12
@@ -1365,26 +1761,36 @@ setUltimasInscricoes(
                           {formatarData(
                             inscricao.created_at
                           )}
+
                         </div>
 
                         <p className="mt-1 text-[11px] text-zinc-400">
                           {formatarDataHora(
                             inscricao.created_at
-                          ).split(
-                            " "
-                          ).slice(
-                            -1
-                          )}
+                          )
+                            .split(
+                              " "
+                            )
+                            .slice(
+                              -1
+                            )}
                         </p>
+
                       </div>
+
                     </div>
                   )
                 )}
+
               </div>
             )}
+
           </CardContent>
+
         </Card>
+
       </div>
+
     </div>
   );
 }
@@ -1406,9 +1812,13 @@ function MetricCard({
 }) {
   return (
     <Card className="border-zinc-200 shadow-sm">
+
       <CardContent className="p-5">
+
         <div className="flex items-start justify-between">
+
           <div>
+
             <p className="text-sm font-medium text-zinc-500">
               {title}
             </p>
@@ -1416,17 +1826,21 @@ function MetricCard({
             <p className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">
               {value}
             </p>
+
           </div>
 
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
             {icon}
           </div>
+
         </div>
 
         <p className="mt-3 text-xs text-zinc-500">
           {description}
         </p>
+
       </CardContent>
+
     </Card>
   );
 }
@@ -1446,7 +1860,9 @@ function SummaryItem({
 }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-zinc-100 pb-4 last:border-0 last:pb-0">
+
       <div className="min-w-0">
+
         <p className="text-sm font-medium text-zinc-800">
           {label}
         </p>
@@ -1454,11 +1870,13 @@ function SummaryItem({
         <p className="mt-1 truncate text-xs text-zinc-500">
           {detail}
         </p>
+
       </div>
 
       <p className="shrink-0 text-lg font-bold text-zinc-950">
         {value}
       </p>
+
     </div>
   );
 }
@@ -1473,7 +1891,8 @@ function StatusBadge({
   status: string;
 }) {
   if (
-    status === "publicado"
+    status ===
+    "publicado"
   ) {
     return (
       <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50">
@@ -1483,7 +1902,8 @@ function StatusBadge({
   }
 
   if (
-    status === "rascunho"
+    status ===
+    "rascunho"
   ) {
     return (
       <Badge
@@ -1496,7 +1916,8 @@ function StatusBadge({
   }
 
   if (
-    status === "inativo"
+    status ===
+    "inativo"
   ) {
     return (
       <Badge
