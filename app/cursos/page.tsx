@@ -206,7 +206,7 @@ export default function TodosTreinamentosPage() {
               marginTop:
                 "14px",
               fontSize:
-                "clamp(44px, 4vw, 44px)",
+                "clamp(28px, 4vw, 44px)",
               lineHeight:
                 "1.05",
               maxWidth:

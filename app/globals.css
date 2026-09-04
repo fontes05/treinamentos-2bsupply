@@ -129,7 +129,7 @@ html {
 
 body {
   margin: 0;
-
+  padding: 0 15px;
   color: var(--text);
 
   overflow-x: hidden;
@@ -1276,7 +1276,7 @@ text-transform: uppercase;
 }
 
 .courses-grid.todostreinamentos {
-  grid-template-columns: repeat(4, 1fr)!important;
+  grid-template-columns: repeat(4, 1fr);
 
 }
 
@@ -1792,7 +1792,7 @@ flex-direction: column;
 
 .company-features strong {
     margin-bottom: 8px;
-    font-size: 24px;
+    font-size: 20px;
     display: block;
     line-height: 1.4rem;
 }
@@ -2210,10 +2210,7 @@ flex-direction: column;
 
 @media (max-width: 980px) {
   .container {
-    width: min(
-      calc(100% - 36px),
-      1420px
-    );
+    width: 100%
   }
 
   .desktop-nav {
@@ -2223,10 +2220,7 @@ flex-direction: column;
   .hero-content {
     width: 100%;
 
-    padding:
-      75px
-      24px
-      55px;
+    padding: 0 5px 0;
 
     text-align: center;
   }
@@ -2234,11 +2228,13 @@ flex-direction: column;
   .eyebrow {
     margin-left: auto;
     margin-right: auto;
+    text-align: left;
   }
 
   .hero-description {
     margin-left: auto;
     margin-right: auto;
+    text-align: left;
   }
 
   .hero-actions,
@@ -2295,21 +2291,16 @@ flex-direction: column;
     display: none;
   }
 
-  .hero-content {
-    padding:
-      55px
-      18px
-      45px;
-  }
-
-  .hero h1 {
-    font-size: 44px;
-  }
-
   .hero-description {
     font-size: 16px;
+    text-align: left;
   }
-
+.why-intro h2{
+      font-size: 25px;
+}
+.why-intro {
+    padding: 23px;
+}
   .hero-actions {
     flex-direction: column;
   }
@@ -2355,7 +2346,9 @@ flex-direction: column;
 
     left: 2px;
   }
-
+.hero-inner{
+      min-height: 540px;
+}
   .floating-card-two {
     top: 95px;
 
@@ -2373,7 +2366,7 @@ flex-direction: column;
   }
 
   .section {
-    padding: 70px 0;
+    padding: 40px 0;
   }
  
 
@@ -2384,13 +2377,16 @@ flex-direction: column;
 
     gap: 20px;
   }
-
+.courses-grid.todostreinamentos {
+    grid-template-columns: repeat(1, 1fr)!important;
+}
   .courses-grid {
     grid-template-columns: 1fr;
+    gap: 35px;
   }
 
   .course-cover {
-    height: 210px;
+    height: 450px;
   }
 
   .comparison {
@@ -2437,11 +2433,15 @@ flex-direction: column;
   }
   newsletter h2,.section-header h2{
       margin: 10px 0!important;
+       font-size: 23px;
   }
   .footer-grid {
     grid-template-columns: 1fr 1fr;
 
     gap: 40px;
+  }
+  .newsletter-form {
+    width: 100%;
   }
 
   .footer-brand {
@@ -2464,7 +2464,8 @@ flex-direction: column;
 
 @media (max-width: 500px) {
   .hero h1 {
-    font-size: 37px;
+    font-size: 28px;
+    text-align: left;
   }
 
   .hero-visual {
@@ -4747,4 +4748,1146 @@ letter-spacing: -1px;
   height: 25px;
   object-fit: contain;
   display: block;
+}
+
+/* =========================================================
+   PÁGINA INTERNA DO CURSO - MOBILE CORRIGIDO
+   COLOCAR NO FINAL DO GLOBALS.CSS
+========================================================= */
+
+@media (max-width: 768px) {
+
+  /* =======================================================
+     EVITA QUALQUER ESTOURO HORIZONTAL
+  ======================================================= */
+
+  .training-detail-page {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .training-detail-page * {
+    max-width: 100%;
+  }
+
+
+  /* =======================================================
+     HERO
+  ======================================================= */
+
+  .training-detail-hero {
+    width: 100%;
+
+    min-height: auto;
+
+    display: block;
+
+    padding: 30px 0 34px;
+
+    overflow: hidden;
+  }
+
+  .training-detail-hero > .container {
+    width: 100%;
+  }
+
+  .training-detail-heading {
+    width: 100%;
+    max-width: 100%;
+  }
+
+
+  /* =======================================================
+     BREADCRUMB
+  ======================================================= */
+
+  .training-breadcrumb {
+    width: 100%;
+
+    gap: 5px;
+
+    margin-bottom: 22px;
+
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .training-breadcrumb a,
+  .training-breadcrumb span {
+    min-width: 0;
+  }
+
+  /*
+   * No celular não precisamos repetir
+   * o nome completo do curso no breadcrumb,
+   * porque ele já aparece logo abaixo no H1.
+   */
+  .training-breadcrumb > span:last-child {
+    display: none;
+  }
+
+  .training-breadcrumb > svg:last-of-type {
+    display: none;
+  }
+
+
+  /* =======================================================
+     CATEGORIA
+  ======================================================= */
+
+  .training-detail-heading .section-kicker {
+    margin-bottom: 8px;
+
+    font-size: 11px;
+
+    line-height: 1.3;
+  }
+
+
+  /* =======================================================
+     TÍTULO
+  ======================================================= */
+
+  .training-detail-heading h1 {
+    width: 100%;
+    max-width: 100%;
+
+    margin: 0;
+
+    font-size: clamp(29px, 8.5vw, 35px);
+
+    line-height: 1.03;
+
+    letter-spacing: -0.035em;
+
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+
+  /* =======================================================
+     DESCRIÇÃO
+  ======================================================= */
+
+  .training-detail-intro {
+    width: 100%;
+    max-width: 100%;
+
+    margin-top: 18px;
+
+    font-size: 15px;
+    line-height: 1.55;
+
+    /*
+     * No mobile deixa aparecer mais texto.
+     */
+    -webkit-line-clamp: 4;
+  }
+
+
+  /* =======================================================
+     INFORMAÇÕES DO CURSO
+  ======================================================= */
+
+  .training-detail-meta {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns: 1fr;
+
+    gap: 8px;
+
+    margin-top: 22px;
+  }
+
+  .training-detail-meta span {
+    width: 100%;
+
+    min-height: 40px;
+
+    margin: 0;
+
+    padding: 8px 11px;
+
+    justify-content: flex-start;
+
+    font-size: 12px;
+  }
+
+
+  /* =======================================================
+     CONTEÚDO + SIDEBAR
+
+     IMPORTANTE:
+     remove completamente as 2 colunas do desktop.
+  ======================================================= */
+
+  .training-detail-layout {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns: minmax(0, 1fr);
+
+    gap: 0;
+
+    align-items: stretch;
+
+    padding-top: 24px;
+    padding-bottom: 55px;
+  }
+
+
+  /* =======================================================
+     CARD DO CURSO FICA PRIMEIRO NO MOBILE
+  ======================================================= */
+
+  .training-video-sidebar {
+    grid-column: 1;
+    grid-row: 1;
+
+    width: 100%;
+
+    position: relative;
+
+    margin-top: 0;
+
+    margin-bottom: 34px;
+
+    align-self: auto;
+  }
+
+  .training-video-card {
+    position: relative;
+
+    top: auto;
+
+    left: auto;
+    right: auto;
+
+    width: 100%;
+    max-width: 100%;
+
+    margin: 0;
+
+    border-radius: 12px;
+
+    box-shadow:
+      0 18px 40px rgba(0, 0, 0, 0.18);
+  }
+
+
+  /* =======================================================
+     CONTEÚDO PRINCIPAL VEM DEPOIS DO CARD
+  ======================================================= */
+
+  .training-detail-main {
+    grid-column: 1;
+    grid-row: 2;
+
+    width: 100%;
+    min-width: 0;
+  }
+
+
+  /* =======================================================
+     DESATIVA O COMPORTAMENTO STICKY/HIDE NO MOBILE
+
+     No desktop continua funcionando normalmente.
+  ======================================================= */
+
+  .training-video-hidden .training-video,
+  .training-video-visible .training-video {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+
+    opacity: 1 !important;
+
+    transform: none !important;
+
+    pointer-events: auto !important;
+  }
+
+
+  /* =======================================================
+     IMAGEM DO CURSO
+  ======================================================= */
+
+  .training-video {
+    width: 100%;
+
+    overflow: hidden;
+  }
+
+  .training-video-image {
+    width: 100%;
+    height: auto;
+  }
+
+  .training-video-image img {
+    width: 100%;
+    height: auto;
+
+    display: block;
+
+    object-fit: contain;
+  }
+
+
+  /* =======================================================
+     PLAY
+  ======================================================= */
+
+  .training-video-play {
+    width: 56px;
+    height: 56px;
+  }
+
+  .training-video-play svg {
+    width: 23px;
+    height: 23px;
+  }
+
+
+  /* =======================================================
+     CONTEÚDO DO CARD
+  ======================================================= */
+
+  .training-video-content {
+    width: 100%;
+
+    padding: 20px;
+  }
+
+  .training-video-content h3,
+  .training-video-course-title {
+    margin: 0 0 14px;
+
+    font-size: 22px;
+
+    line-height: 1.12;
+
+    letter-spacing: -0.025em;
+
+    overflow-wrap: break-word;
+  }
+
+
+  /* =======================================================
+     PREÇO
+  ======================================================= */
+
+  .training-video-price {
+    margin: 16px 0 20px;
+  }
+
+  .training-video-price-old {
+    font-size: 13px;
+  }
+
+  .training-video-price-old strong {
+    font-size: 14px;
+  }
+
+  .training-video-price-current span {
+    font-size: 14px;
+  }
+
+  .training-video-price-current strong {
+    font-size: 30px;
+  }
+
+  .training-video-installments {
+    font-size: 13px;
+  }
+
+
+  /* =======================================================
+     BOTÃO INSCREVA-SE
+  ======================================================= */
+
+  .training-video-primary {
+    width: 100%;
+
+    min-height: 50px;
+
+    font-size: 15px;
+  }
+
+
+  /* =======================================================
+     BOX DE BENEFÍCIOS
+  ======================================================= */
+
+  .training-content-box {
+    width: 100%;
+
+    padding: 20px;
+
+    border-radius: 13px;
+  }
+
+  .training-section-heading {
+    margin-bottom: 20px;
+  }
+
+  .training-section-heading > span {
+    font-size: 11px;
+  }
+
+  .training-section-heading h2 {
+    margin-top: 5px;
+
+    font-size: 24px;
+
+    line-height: 1.12;
+  }
+
+  .training-benefits-grid {
+    grid-template-columns: 1fr;
+
+    gap: 10px;
+  }
+
+  .training-benefit {
+    width: 100%;
+
+    min-height: 60px;
+
+    padding: 10px;
+  }
+
+  .training-benefit span {
+    min-width: 0;
+
+    font-size: 13px;
+
+    line-height: 1.35;
+
+    overflow-wrap: break-word;
+  }
+
+
+  /* =======================================================
+     SEÇÕES
+  ======================================================= */
+
+  .training-section {
+    width: 100%;
+
+    padding: 34px 0;
+  }
+
+  .training-section-text {
+    width: 100%;
+
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+
+  /* =======================================================
+     PÚBLICO ALVO
+  ======================================================= */
+
+  .training-audience {
+    width: 100%;
+
+    padding: 16px;
+
+    gap: 12px;
+  }
+
+  .training-audience p {
+    min-width: 0;
+
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+
+  /* =======================================================
+     TÍTULO + QUANTIDADE DE MÓDULOS
+  ======================================================= */
+
+  .training-section-heading-row {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    gap: 10px;
+  }
+
+  .training-section-heading-row small {
+    font-size: 13px;
+  }
+
+
+  /* =======================================================
+     MÓDULOS
+  ======================================================= */
+
+  .training-modules {
+    width: 100%;
+
+    border-radius: 12px;
+  }
+
+  .training-module-header {
+    width: 100%;
+
+    gap: 10px;
+
+    padding: 15px;
+  }
+
+  .training-module-header > div {
+    min-width: 0;
+
+    gap: 10px;
+  }
+
+  .training-module-number {
+    width: 42px;
+    height: 42px;
+
+    flex: 0 0 42px;
+  }
+
+  .training-module-header strong {
+    min-width: 0;
+
+    font-size: 14px;
+    line-height: 1.3;
+
+    overflow-wrap: break-word;
+  }
+
+  .training-module-header > svg {
+    flex: 0 0 auto;
+  }
+
+  .training-module-content {
+    width: 100%;
+
+    padding: 0 16px 18px;
+
+    font-size: 13px;
+    line-height: 1.65;
+
+    overflow-wrap: break-word;
+  }
+
+
+  /* =======================================================
+     PROFESSOR
+  ======================================================= */
+
+  .training-professor {
+    width: 100%;
+
+    grid-template-columns: 90px minmax(0, 1fr);
+
+    gap: 15px;
+  }
+
+  .training-professor-photo {
+    width: 90px;
+    height: 90px;
+
+    border-radius: 12px;
+  }
+
+  .training-professor-photo img {
+    width: 100%;
+    height: 100%;
+  }
+
+  .training-professor-content {
+    min-width: 0;
+  }
+
+  .training-professor-content h3 {
+    margin-top: 0;
+
+    font-size: 20px;
+    line-height: 1.2;
+  }
+
+  .training-professor-content > span {
+    font-size: 13px;
+  }
+
+  .training-professor-content p {
+    font-size: 13px;
+    line-height: 1.5;
+
+    overflow-wrap: break-word;
+  }
+
+
+  /* =======================================================
+     CERTIFICADOS
+  ======================================================= */
+
+  .training-certificates {
+    width: 100%;
+
+    grid-template-columns: 1fr;
+
+    gap: 15px;
+  }
+
+  .training-certificate {
+    width: 100%;
+  }
+
+  .training-certificate-content {
+    padding: 17px;
+  }
+
+
+  /* =======================================================
+     CTA FINAL
+  ======================================================= */
+
+  .training-final-cta {
+    width: 100%;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    gap: 24px;
+
+    margin-top: 35px;
+
+    padding: 24px 20px;
+
+    border-radius: 14px;
+  }
+
+  .training-final-cta h2 {
+    width: 100%;
+
+    margin: 8px 0;
+
+    font-size: 23px;
+    line-height: 1.15;
+  }
+
+  .training-final-cta p {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .training-final-cta > a {
+    width: 100%;
+
+    min-height: 50px;
+
+    justify-content: center;
+
+    text-align: center;
+  }
+
+
+  /* =======================================================
+     MODAL DE VÍDEO
+  ======================================================= */
+
+  .training-preview-modal {
+    width: calc(100vw - 28px) !important;
+    max-width: calc(100vw - 28px) !important;
+
+    padding: 0 16px 16px !important;
+
+    border-radius: 14px;
+  }
+
+  .training-preview-header {
+    padding: 20px 0 16px;
+  }
+
+  .training-preview-title {
+    max-width: calc(100% - 35px);
+
+    font-size: 18px !important;
+    line-height: 1.25 !important;
+  }
+}
+
+
+/* =========================================================
+   CELULARES PEQUENOS
+========================================================= */
+
+@media (max-width: 420px) {
+
+  .training-detail-heading h1 {
+    font-size: 29px;
+  }
+
+  .training-video-content {
+    padding: 17px;
+  }
+
+  .training-video-content h3,
+  .training-video-course-title {
+    font-size: 20px;
+  }
+
+  .training-video-price-current strong {
+    font-size: 28px;
+  }
+
+  .training-content-box {
+    padding: 17px;
+  }
+
+  .training-section-heading h2 {
+    font-size: 22px;
+  }
+
+  .training-professor {
+    grid-template-columns: 1fr;
+  }
+
+  .training-professor-photo {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+/* =========================================================
+   MENU MOBILE DO HEADER
+   COLOCAR NO FINAL DO GLOBALS.CSS
+========================================================= */
+
+
+/* =========================================================
+   DESKTOP
+========================================================= */
+
+.mobile-menu-button,
+.mobile-menu,
+.mobile-menu-overlay {
+  display: none;
+}
+
+
+/* =========================================================
+   ÍCONE WHATSAPP DO DESKTOP
+========================================================= */
+
+.header-whatsapp-icon {
+  width: 16px;
+  height: 16px;
+
+  fill: currentColor !important;
+  stroke: none !important;
+
+  flex-shrink: 0;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 980px) {
+
+  /* -------------------------------------------------------
+     HEADER
+  ------------------------------------------------------- */
+
+  .site-header {
+    position: sticky;
+
+    top: 0;
+
+    z-index: 1000;
+
+    width: 100%;
+
+    height: 68px;
+  }
+
+  .header-content {
+    position: relative;
+
+    width: 100%;
+    height: 68px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+  }
+
+
+  /* -------------------------------------------------------
+     LOGO
+  ------------------------------------------------------- */
+
+  .header-content .logo {
+    position: relative;
+
+    z-index: 1003;
+
+    flex: 0 0 auto;
+  }
+
+  .header-content .logo-image {
+    width: 145px;
+
+    max-width: 145px;
+
+    height: auto;
+  }
+
+
+  /* -------------------------------------------------------
+     ESCONDE O DESKTOP
+  ------------------------------------------------------- */
+
+  .desktop-nav,
+  .header-actions {
+    display: none !important;
+  }
+
+
+  /* -------------------------------------------------------
+     BOTÃO HAMBÚRGUER
+  ------------------------------------------------------- */
+
+  .mobile-menu-button {
+    position: relative;
+
+    z-index: 1003;
+
+    flex: 0 0 auto;
+
+    width: 44px;
+    height: 44px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    border:
+      1px solid
+      rgba(255, 255, 255, 0.10);
+
+    border-radius: 10px;
+
+    background:
+      rgba(255, 255, 255, 0.035);
+
+    color: #ffffff;
+
+    cursor: pointer;
+
+    transition:
+      background 0.2s ease,
+      border-color 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .mobile-menu-button:hover {
+    background:
+      rgba(255, 255, 255, 0.07);
+
+    border-color:
+      rgba(255, 255, 255, 0.16);
+  }
+
+  .mobile-menu-button:active {
+    transform: scale(0.96);
+  }
+
+  .mobile-menu-button svg {
+    width: 24px;
+    height: 24px;
+
+    fill: none !important;
+
+    stroke: currentColor !important;
+
+    stroke-width: 2;
+
+    color: inherit;
+  }
+
+
+  /* -------------------------------------------------------
+     OVERLAY
+  ------------------------------------------------------- */
+
+  .mobile-menu-overlay {
+    position: fixed;
+
+    z-index: 998;
+
+    left: 0;
+    right: 0;
+
+    top: 68px;
+    bottom: 0;
+
+    display: block;
+
+    background:
+      rgba(0, 0, 0, 0.55);
+
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+
+    opacity: 0;
+
+    visibility: hidden;
+
+    pointer-events: none;
+
+    transition:
+      opacity 0.25s ease,
+      visibility 0.25s ease;
+  }
+
+  .mobile-menu-overlay-open {
+    opacity: 1;
+
+    visibility: visible;
+
+    pointer-events: auto;
+  }
+
+
+  /* -------------------------------------------------------
+     MENU
+  ------------------------------------------------------- */
+
+  .mobile-menu {
+    position: fixed;
+
+    z-index: 999;
+
+    left: 0;
+    right: 0;
+
+    top: 68px;
+
+    display: block;
+
+    width: 100%;
+
+    padding:
+      12px
+      16px
+      22px;
+
+    background:
+      #06101d;
+
+    border-top:
+      1px solid
+      rgba(255, 255, 255, 0.05);
+
+    border-bottom:
+      1px solid
+      rgba(255, 255, 255, 0.08);
+
+    box-shadow:
+      0 25px 50px
+      rgba(0, 0, 0, 0.38);
+
+    transform:
+      translateY(-18px);
+
+    opacity: 0;
+
+    visibility: hidden;
+
+    pointer-events: none;
+
+    transition:
+      transform 0.25s ease,
+      opacity 0.22s ease,
+      visibility 0.22s ease;
+  }
+
+  .mobile-menu-open {
+    transform:
+      translateY(0);
+
+    opacity: 1;
+
+    visibility: visible;
+
+    pointer-events: auto;
+  }
+
+
+  /* -------------------------------------------------------
+     LINKS
+  ------------------------------------------------------- */
+
+  .mobile-menu-nav {
+    display: flex;
+
+    flex-direction: column;
+
+    width: 100%;
+  }
+
+  .mobile-menu-nav > a {
+    width: 100%;
+
+    min-height: 57px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+
+    padding:
+      0
+      5px;
+
+    border-bottom:
+      1px solid
+      rgba(255, 255, 255, 0.08);
+
+    color:
+      rgba(255, 255, 255, 0.78);
+
+    font-size: 15px;
+
+    font-weight: 500;
+
+    transition:
+      color 0.2s ease,
+      padding-left 0.2s ease;
+  }
+
+  .mobile-menu-nav > a:hover,
+  .mobile-menu-nav >
+  a.mobile-menu-active {
+    color: #ffffff;
+
+    padding-left: 10px;
+  }
+
+  .mobile-menu-nav >
+  a.mobile-menu-active span {
+    color: #7cd948;
+  }
+
+  .mobile-menu-nav > a svg {
+    width: 18px;
+    height: 18px;
+
+    flex-shrink: 0;
+
+    fill: none !important;
+
+    stroke:
+      rgba(255, 255, 255, 0.38)
+      !important;
+  }
+
+
+  /* -------------------------------------------------------
+     CONTATO
+  ------------------------------------------------------- */
+
+  .mobile-menu-contact {
+    width: 100%;
+
+    min-height: 50px;
+
+    margin-top: 18px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 9px;
+
+    border-radius: 10px;
+
+    background:
+      var(--button-gradient);
+
+    color: #06101d !important;
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+    box-shadow:
+      0 12px 28px
+      rgba(89, 225, 153, 0.12);
+  }
+
+  .mobile-menu-contact svg {
+    width: 19px;
+    height: 19px;
+
+    flex-shrink: 0;
+
+    fill:
+      #06101d !important;
+
+    stroke: none !important;
+  }
+}
+
+
+/* =========================================================
+   CELULARES PEQUENOS
+========================================================= */
+
+@media (max-width: 420px) {
+
+  .header-content .logo-image {
+    width: 135px;
+
+    max-width: 135px;
+  }
+
+  .mobile-menu-button {
+    width: 42px;
+    height: 42px;
+  }
+
+  .mobile-menu {
+    padding:
+      10px
+      14px
+      20px;
+  }
+
+  .mobile-menu-nav > a {
+    min-height: 54px;
+
+    font-size: 14px;
+  }
 }
