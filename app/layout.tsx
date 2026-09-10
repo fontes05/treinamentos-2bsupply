@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import "./globals.css";
+
 import { Geist } from "next/font/google";
+import { GoogleAnalytics } from "@next/third-parties/google";
+
 import { cn } from "@/lib/utils";
 import AssistantWrapper from "@/components/assistant/AssistantWrapper";
 
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -22,11 +27,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" data-theme="dark" className={cn("font-sans", geist.variable)}>
+    <html
+      lang="pt-BR"
+      data-theme="dark"
+      className={cn("font-sans", geist.variable)}
+    >
       <body>
         {children}
-<AssistantWrapper />
+
+        <AssistantWrapper />
       </body>
+
+      <GoogleAnalytics
+        gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID!}
+      />
     </html>
   );
 }
