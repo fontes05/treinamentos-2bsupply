@@ -5328,9 +5328,8 @@ letter-spacing: -1px;
   }
 
   .training-professor-photo {
-    width: 90px;
-    height: 90px;
-
+        width: 200px!important;
+        height: 280px!important;
     border-radius: 12px;
   }
 
