@@ -380,14 +380,6 @@ function formatarOrigemMidiaGA4(
     return "WhatsApp";
   }
 
-  if (
-    origemNormalizada.includes(
-      "tiktok"
-    )
-  ) {
-    return "TikTok";
-  }
-
   return origem;
 }
 
@@ -3185,6 +3177,56 @@ function AnalyticsMetricCard({
 
     </Card>
   );
+}
+
+/* =========================================================
+   CARD ANALYTICS
+========================================================= */
+
+function AnalyticsCard({
+  titulo,
+  descricao,
+  icon: Icon,
+  children,
+}: {
+  titulo: string;
+  descricao: string;
+  icon: ElementType;
+  children: ReactNode;
+}) {
+  return (
+    <Card className="border-zinc-200 shadow-sm">
+      <CardHeader>
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#667cf8]/10 text-[#667cf8]">
+            <Icon size={19} />
+          </div>
+
+          <div className="min-w-0">
+            <CardTitle className="text-base">
+              {titulo}
+            </CardTitle>
+
+            <CardDescription>
+              {descricao}
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent>
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* =========================================================
+   ANALYTICS SEM DADOS
+========================================================= */
+
+function AnalyticsEmpty() {
+  return <AnalyticsVazio />;
 }
 
 /* =========================================================
