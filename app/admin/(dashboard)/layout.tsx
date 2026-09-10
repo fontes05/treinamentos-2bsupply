@@ -13,6 +13,7 @@ import {
   GraduationCap,
   ImageIcon,
   LayoutDashboard,
+  Link2,
   ListChecks,
   PlusCircle,
   Settings,
@@ -76,6 +77,11 @@ export default function AdminLayout({
     title: "Conteúdos",
     href: "/admin/conteudos",
     icon: FileText,
+  },
+  {
+    title: "Redirecionamentos",
+    href: "/admin/redirecionamentos",
+    icon: Link2,
   },
   {
     title: "Configurações",

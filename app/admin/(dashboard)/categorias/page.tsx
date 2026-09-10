@@ -10,6 +10,7 @@ import {
   Check,
   Loader2,
   Upload,
+  Link2,
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
