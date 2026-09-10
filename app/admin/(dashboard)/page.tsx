@@ -210,6 +210,188 @@ function formatarNumero(
 }
 
 /* =========================================================
+   FORMATAR ORIGEM GA4
+========================================================= */
+
+function formatarOrigemResumoGA4(
+  origem: string
+) {
+  const valor =
+    origem
+      ?.trim()
+      .toLowerCase();
+
+  if (
+    valor ===
+      "não identificado" ||
+    valor ===
+      "(not set)" ||
+    valor ===
+      "not set"
+  ) {
+    return {
+      nome:
+        "Origem não identificada",
+
+      descricao:
+        "O GA4 não conseguiu determinar a origem",
+    };
+  }
+
+  if (
+    valor ===
+      "(data not available)" ||
+    valor ===
+      "data not available"
+  ) {
+    return {
+      nome:
+        "Dados de origem indisponíveis",
+
+      descricao:
+        "O Google não disponibilizou a origem desta sessão",
+    };
+  }
+
+  return {
+    nome:
+      origem,
+
+    descricao:
+      "",
+  };
+}
+
+/* =========================================================
+   HELPERS - CANAIS GA4
+========================================================= */
+
+const NOMES_CANAIS_GA4: Record<string, string> = {
+  Direct: "Direto",
+  "Organic Search": "Busca orgânica",
+  "Paid Search": "Busca paga",
+  "Organic Social": "Social orgânico",
+  "Paid Social": "Social pago",
+  Referral: "Referência",
+  "Cross-network": "Campanhas multicanal",
+  Email: "E-mail",
+  Affiliates: "Afiliados",
+  Display: "Display",
+  "Organic Video": "Vídeo orgânico",
+  "Paid Video": "Vídeo pago",
+  Audio: "Áudio",
+  SMS: "SMS",
+  Unassigned: "Não identificado",
+};
+
+function traduzirCanalGA4(canal: string) {
+  return NOMES_CANAIS_GA4[canal] ?? canal;
+}
+
+function dadoGA4Disponivel(
+  value: string | null | undefined
+) {
+  if (!value) return false;
+
+  const normalizado = value
+    .trim()
+    .toLowerCase();
+
+  return ![
+    "(not set)",
+    "(data not available)",
+    "not set",
+    "data not available",
+    "undefined",
+    "null",
+  ].includes(normalizado);
+}
+
+function formatarOrigemMidiaGA4(
+  item: AnalyticsCanal
+) {
+  const origem =
+    dadoGA4Disponivel(
+      item.origemOriginal
+    )
+      ? item.origemOriginal
+      : dadoGA4Disponivel(
+            item.origem
+          )
+        ? item.origem
+        : null;
+
+  /* DIRETO */
+
+  if (
+    item.canal === "Direct"
+  ) {
+    return "Acesso direto ao site";
+  }
+
+  /* SEM ORIGEM IDENTIFICADA */
+
+  if (!origem) {
+    return "Origem não identificada pelo GA4";
+  }
+
+  /* LIMPEZA DE ORIGENS */
+
+  const origemNormalizada =
+    origem.toLowerCase();
+
+  if (
+    origemNormalizada.includes(
+      "linkedin"
+    )
+  ) {
+    return "LinkedIn";
+  }
+
+  if (
+    origemNormalizada.includes(
+      "instagram"
+    )
+  ) {
+    return "Instagram";
+  }
+
+  if (
+    origemNormalizada.includes(
+      "facebook"
+    )
+  ) {
+    return "Facebook";
+  }
+
+  if (
+    origemNormalizada.includes(
+      "youtube"
+    )
+  ) {
+    return "YouTube";
+  }
+
+  if (
+    origemNormalizada.includes(
+      "whatsapp"
+    )
+  ) {
+    return "WhatsApp";
+  }
+
+  if (
+    origemNormalizada.includes(
+      "tiktok"
+    )
+  ) {
+    return "TikTok";
+  }
+
+  return origem;
+}
+
+/* =========================================================
    DATAS
 ========================================================= */
 
@@ -1300,6 +1482,84 @@ export default function AdminDashboardPage() {
       analytics.origens,
     ]);
 
+/* =======================================================
+   CANAIS DE AQUISIÇÃO
+======================================================= */
+
+const canaisAquisicao =
+  useMemo(() => {
+    const totalSessoes =
+      analytics.canais.reduce(
+        (
+          total,
+          item
+        ) =>
+          total +
+          Number(
+            item.sessoes ??
+              0
+          ),
+        0
+      );
+
+    return [
+      ...analytics.canais,
+    ]
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          Number(
+            b.sessoes
+          ) -
+          Number(
+            a.sessoes
+          )
+      )
+      .map(
+        (
+          item
+        ) => {
+          const sessoes =
+            Number(
+              item.sessoes ??
+                0
+            );
+
+          const percentual =
+            totalSessoes >
+            0
+              ? Math.round(
+                  (sessoes /
+                    totalSessoes) *
+                    100
+                )
+              : 0;
+
+          return {
+            ...item,
+
+            sessoes,
+
+            percentual,
+
+            nome:
+              traduzirCanalGA4(
+                item.canal
+              ),
+
+            detalhe:
+              formatarOrigemMidiaGA4(
+                item
+              ),
+          };
+        }
+      );
+  }, [
+    analytics.canais,
+  ]);
+
   /* =======================================================
      RENDER
   ======================================================= */
@@ -2367,228 +2627,323 @@ export default function AdminDashboardPage() {
 
         <div className="grid gap-6 xl:grid-cols-2">
 
-          {/* =================================================
-              DE ONDE VIERAM
-          ================================================= */}
+    {/* ===============================================
+    DE ONDE VIERAM
+=============================================== */}
 
-          <Card className="border-zinc-200 shadow-sm">
+<AnalyticsCard
+  titulo="De onde vieram"
+  descricao="Participação das origens nas sessões do site."
+  icon={Globe2}
+>
+  {analytics.origens.length === 0 ? (
+    <AnalyticsEmpty />
+  ) : (
+    <div className="space-y-5">
 
-            <CardHeader>
+      {analytics.origens
+        .slice(0, 10)
+        .map((item) => {
+          const origemFormatada =
+            formatarOrigemResumoGA4(
+              item.origem
+            );
 
-              <div className="flex items-start gap-3">
+          return (
+            <div
+              key={item.origem}
+            >
 
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#667cf8]/10 text-[#667cf8]">
-
-                  <Globe2
-                    size={19}
-                  />
-
-                </div>
+              <div className="mb-2 flex items-start justify-between gap-4">
 
                 <div>
 
-                  <CardTitle className="text-base">
-                    De onde vieram
-                  </CardTitle>
+                  <div className="flex flex-wrap items-center gap-2">
 
-                  <CardDescription>
-                    Participação das origens nas sessões do site.
-                  </CardDescription>
+                    <strong className="text-sm text-zinc-800">
+                      {
+                        origemFormatada.nome
+                      }
+                    </strong>
+
+                    <span className="text-xs text-zinc-400">
+                      {formatarNumero(
+                        item.sessoes
+                      )}{" "}
+                      sessões
+                    </span>
+
+                  </div>
+
+                  {origemFormatada.descricao && (
+                    <span className="mt-1 block text-[11px] leading-4 text-zinc-400">
+                      {
+                        origemFormatada.descricao
+                      }
+                    </span>
+                  )}
 
                 </div>
 
+                <strong className="shrink-0 text-sm text-[#667cf8]">
+                  {
+                    item.percentual
+                  }
+                  %
+                </strong>
+
               </div>
 
-            </CardHeader>
+              <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
 
-            <CardContent>
+                <div
+                  className="h-full rounded-full bg-[#667cf8] transition-all"
+                  style={{
+                    width: `${Math.min(
+                      Math.max(
+                        item.percentual,
+                        0
+                      ),
+                      100
+                    )}%`,
+                  }}
+                />
 
-              {carregandoAnalytics ? (
-                <AnalyticsLoading />
-              ) : analytics.origens.length ===
-                0 ? (
-                <AnalyticsVazio />
-              ) : (
-                <div className="space-y-5">
+              </div>
 
-                  {analytics.origens
-                    .slice(
-                      0,
-                      7
-                    )
-                    .map(
-                      (
-                        item
-                      ) => (
-                        <div
-                          key={
-                            item.origem
+            </div>
+          );
+        })}
+
+    </div>
+  )}
+</AnalyticsCard>
+        {/* =================================================
+    CANAIS DE AQUISIÇÃO
+================================================= */}
+
+<Card className="border-zinc-200 shadow-sm">
+
+  <CardHeader>
+
+    <div className="flex items-start gap-3">
+
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#667cf8]/10 text-[#667cf8]">
+
+        <Network
+          size={19}
+        />
+
+      </div>
+
+      <div className="min-w-0">
+
+        <CardTitle className="text-base">
+          Canais de aquisição
+        </CardTitle>
+
+        <CardDescription>
+          Como os visitantes chegaram ao site.
+        </CardDescription>
+
+      </div>
+
+    </div>
+
+  </CardHeader>
+
+  <CardContent>
+
+    {carregandoAnalytics ? (
+      <AnalyticsLoading />
+    ) : canaisAquisicao.length ===
+      0 ? (
+      <AnalyticsVazio />
+    ) : (
+      <div className="space-y-3">
+
+        {/* RESUMO */}
+
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-zinc-50 px-4 py-3">
+
+          <div>
+
+            <span className="block text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+              Sessões analisadas
+            </span>
+
+            <strong className="mt-0.5 block text-lg font-bold text-zinc-900">
+              {formatarNumero(
+                canaisAquisicao.reduce(
+                  (
+                    total,
+                    item
+                  ) =>
+                    total +
+                    item.sessoes,
+                  0
+                )
+              )}
+            </strong>
+
+          </div>
+
+          <div className="text-right">
+
+            <span className="block text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+              Canais encontrados
+            </span>
+
+            <strong className="mt-0.5 block text-lg font-bold text-[#667cf8]">
+              {
+                canaisAquisicao.length
+              }
+            </strong>
+
+          </div>
+
+        </div>
+
+        {/* CANAIS */}
+
+        {canaisAquisicao
+          .slice(
+            0,
+            7
+          )
+          .map(
+            (
+              item,
+              index
+            ) => {
+              const naoIdentificado =
+                item.canal ===
+                "Unassigned";
+
+              return (
+                <div
+                  key={`${item.canal}-${item.origemMidia}-${index}`}
+                  className="
+                    rounded-xl
+                    border border-zinc-100
+                    bg-white
+                    p-4
+                    transition
+                    hover:border-zinc-200
+                    hover:bg-zinc-50/50
+                  "
+                >
+
+                  {/* TOPO */}
+
+                  <div className="flex items-start justify-between gap-4">
+
+                    <div className="min-w-0">
+
+                      <div className="flex flex-wrap items-center gap-2">
+
+                        <strong className="text-sm font-bold text-zinc-900">
+                          {
+                            item.nome
                           }
-                        >
+                        </strong>
 
-                          <div className="mb-2 flex items-center justify-between gap-4">
+                        {naoIdentificado && (
+                          <span className="
+                            rounded-full
+                            bg-amber-100
+                            px-2
+                            py-0.5
+                            text-[9px]
+                            font-bold
+                            uppercase
+                            tracking-wide
+                            text-amber-700
+                          ">
+                            Revisar origem
+                          </span>
+                        )}
 
-                            <div>
+                      </div>
 
-                              <strong className="text-sm text-zinc-800">
-                                {
-                                  item.origem
-                                }
-                              </strong>
+                      <span className="mt-1 block truncate text-xs text-zinc-400">
+                        {
+                          item.detalhe
+                        }
+                      </span>
 
-                              <span className="ml-2 text-xs text-zinc-400">
+                    </div>
 
-                                {formatarNumero(
-                                  item.sessoes
-                                )}{" "}
+                    <div className="shrink-0 text-right">
 
-                                sessões
+                      <strong className="block text-base font-bold text-zinc-950">
+                        {formatarNumero(
+                          item.sessoes
+                        )}
+                      </strong>
 
-                              </span>
+                      <span className="block text-[11px] text-zinc-400">
+                        sessões
+                      </span>
 
-                            </div>
+                    </div>
 
-                            <strong className="text-sm text-[#667cf8]">
+                  </div>
 
-                              {
-                                item.percentual
-                              }
-                              %
+                  {/* BARRA */}
 
-                            </strong>
+                  <div className="mt-3">
 
-                          </div>
+                    <div className="mb-1.5 flex items-center justify-between">
 
-                          <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
 
-                            <div
-                              className="h-full rounded-full bg-[#667cf8]"
-                              style={{
-                                width: `${Math.min(
-                                  Math.max(
-                                    item.percentual,
-                                    0
-                                  ),
-                                  100
-                                )}%`,
-                              }}
-                            />
+                      <strong className="text-xs font-bold text-[#667cf8]">
+                        {
+                          item.percentual
+                        }
+                        %
+                      </strong>
 
-                          </div>
+                    </div>
 
-                        </div>
-                      )
-                    )}
+                    <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
 
-                </div>
-              )}
+                      <div
+                        className="h-full rounded-full bg-[#667cf8] transition-all"
+                        style={{
+                          width: `${Math.min(
+                            Math.max(
+                              item.percentual,
+                              0
+                            ),
+                            100
+                          )}%`,
+                        }}
+                      />
 
-            </CardContent>
+                    </div>
 
-          </Card>
+                  </div>
 
-          {/* =================================================
-              CANAIS DE AQUISIÇÃO
-          ================================================= */}
+                  {/* EXPLICAÇÃO UNASSIGNED */}
 
-          <Card className="border-zinc-200 shadow-sm">
-
-            <CardHeader>
-
-              <div className="flex items-start gap-3">
-
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#667cf8]/10 text-[#667cf8]">
-
-                  <Network
-                    size={19}
-                  />
-
-                </div>
-
-                <div>
-
-                  <CardTitle className="text-base">
-                    Canais de aquisição
-                  </CardTitle>
-
-                  <CardDescription>
-                    Como o GA4 classifica o tipo de tráfego recebido.
-                  </CardDescription>
+                  {naoIdentificado && (
+                    <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-700">
+                      O Google Analytics recebeu esta visita, mas não conseguiu identificar corretamente o canal de origem. Isso pode acontecer quando links não possuem parâmetros UTM ou quando os dados de referência não estão disponíveis.
+                    </p>
+                  )}
 
                 </div>
+              );
+            }
+          )}
 
-              </div>
+      </div>
+    )}
 
-            </CardHeader>
+  </CardContent>
 
-            <CardContent>
-
-              {carregandoAnalytics ? (
-                <AnalyticsLoading />
-              ) : analytics.canais.length ===
-                0 ? (
-                <AnalyticsVazio />
-              ) : (
-                <div className="divide-y divide-zinc-100">
-
-                  {analytics.canais
-                    .slice(
-                      0,
-                      7
-                    )
-                    .map(
-                      (
-                        item,
-                        index
-                      ) => (
-                        <div
-                          key={`${item.canal}-${item.origemMidia}-${index}`}
-                          className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
-                        >
-
-                          <div>
-
-                            <div className="flex items-center gap-2">
-
-                              <strong className="text-sm text-zinc-800">
-                                {
-                                  item.canal
-                                }
-                              </strong>
-
-                              {item.canal ===
-                                "Unassigned" && (
-                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold uppercase text-amber-700">
-                                  Verificar
-                                </span>
-                              )}
-
-                            </div>
-
-                            <span className="mt-1 block text-xs text-zinc-400">
-                              {
-                                item.origemMidia
-                              }
-                            </span>
-
-                          </div>
-
-                          <strong className="text-sm text-zinc-950">
-                            {formatarNumero(
-                              item.sessoes
-                            )}
-                          </strong>
-
-                        </div>
-                      )
-                    )}
-
-                </div>
-              )}
-
-            </CardContent>
-
-          </Card>
+</Card>
 
         </div>
 

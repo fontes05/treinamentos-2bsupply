@@ -3770,6 +3770,23 @@ color: #fff;
    SIDEBAR STICKY
 ========================================================= */
 
+
+.itensimportantes{
+  color: #111827;
+    z-index: 2;
+    border: 0;
+    border-radius: 10px;
+    width: 100%;
+    position: sticky;
+    top: 410px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px #00000038;
+}
+.itensimportantes span{
+  font-size: 15px;
+}
+
+
 .training-video-sidebar {
   position: relative;
 

@@ -165,6 +165,29 @@ type CursoProfessor = {
   professor_id: string;
 };
 
+type AulaExtra = {
+  id: string;
+  titulo: string;
+
+  descricao:
+    | string
+    | null;
+
+  ordem: number;
+
+  grupo_titulo:
+    | string
+    | null;
+
+  grupo_ordem: number;
+};
+
+type GrupoAulaExtra = {
+  titulo: string;
+  ordem: number;
+  aulas: AulaExtra[];
+};
+
 /* =========================================================
    ÍCONES DOS BENEFÍCIOS
 ========================================================= */
@@ -350,6 +373,14 @@ export default function TreinamentoPage() {
     setModulos,
   ] =
     useState<Modulo[]>([]);
+
+  const [
+    gruposAulasExtras,
+    setGruposAulasExtras,
+  ] =
+    useState<
+      GrupoAulaExtra[]
+    >([]);
 
   const [
     beneficios,
@@ -647,6 +678,125 @@ export default function TreinamentoPage() {
               .id,
           );
         }
+
+        /* ===============================================
+           AULAS EXTRAS
+        =============================================== */
+
+        const {
+          data:
+            aulasExtrasData,
+          error:
+            aulasExtrasError,
+        } =
+          await supabase
+            .from(
+              "treinamentos_aulas_extras",
+            )
+            .select(`
+              id,
+              titulo,
+              descricao,
+              ordem,
+              grupo_titulo,
+              grupo_ordem
+            `)
+            .eq(
+              "curso_id",
+              cursoId,
+            )
+            .eq(
+              "ativo",
+              true,
+            )
+            .order(
+              "grupo_ordem",
+              {
+                ascending:
+                  true,
+              },
+            )
+            .order(
+              "ordem",
+              {
+                ascending:
+                  true,
+              },
+            );
+
+        if (
+          aulasExtrasError
+        ) {
+          throw new Error(
+            aulasExtrasError.message,
+          );
+        }
+
+        const aulasExtras =
+          (
+            aulasExtrasData ??
+            []
+          ) as AulaExtra[];
+
+        const gruposMap =
+          new Map<
+            number,
+            GrupoAulaExtra
+          >();
+
+        aulasExtras.forEach(
+          (aula) => {
+            const grupoOrdem =
+              Number(
+                aula.grupo_ordem ??
+                  1,
+              );
+
+            const grupoTitulo =
+              aula.grupo_titulo?.trim() ||
+              "Aulas Extras";
+
+            if (
+              !gruposMap.has(
+                grupoOrdem,
+              )
+            ) {
+              gruposMap.set(
+                grupoOrdem,
+                {
+                  titulo:
+                    grupoTitulo,
+
+                  ordem:
+                    grupoOrdem,
+
+                  aulas: [],
+                },
+              );
+            }
+
+            gruposMap
+              .get(
+                grupoOrdem,
+              )
+              ?.aulas.push(
+                aula,
+              );
+          },
+        );
+
+        setGruposAulasExtras(
+          Array.from(
+            gruposMap.values(),
+          ).sort(
+            (
+              a,
+              b,
+            ) =>
+              a.ordem -
+              b.ordem,
+          ),
+        );
 
         /* ===============================================
            BENEFÍCIOS
@@ -1131,7 +1281,7 @@ return (
                   size={18}
                 />
 
-                Acesso online
+                Acesso online vitalício
               </span>
 
               {professor && (
@@ -1406,6 +1556,213 @@ return (
                 )}
 
               </div>
+            </section>
+          )}
+
+          {/* =============================================
+              AULAS EXTRAS
+          ============================================= */}
+
+          {gruposAulasExtras.length >
+            0 && (
+            <section className="training-section">
+
+              <div className="training-section-heading">
+
+                <span>
+                  CONTEÚDO ADICIONAL
+                </span>
+
+                <h2>
+                  Aulas Extras
+                </h2>
+
+              </div>
+
+              <div className="mt-6 space-y-8">
+
+                {gruposAulasExtras.map(
+                  (
+                    grupo,
+                  ) => (
+                    <div
+                      key={`${grupo.ordem}-${grupo.titulo}`}
+                      className="overflow-hidden rounded-2xl border border-white/10 bg-[#08111d]"
+                    >
+
+                      {/* TÍTULO DO GRUPO */}
+
+                      <div className="flex flex-col gap-2 border-b border-white/10 bg-[#0c1724] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+
+                        <div>
+
+                          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#59e199]">
+                            Conteúdo complementar
+                          </span>
+
+                          <h3 className="mt-1 text-lg font-bold text-white">
+                            {
+                              grupo.titulo
+                            }
+                          </h3>
+
+                        </div>
+
+                        <span className="text-xs font-medium text-white/50">
+                          {
+                            grupo.aulas.length
+                          }{" "}
+                          conteúdo
+                          {grupo.aulas.length ===
+                          1
+                            ? ""
+                            : "s"}
+                        </span>
+
+                      </div>
+
+                      {/* TABELA DESKTOP */}
+
+                      <div className="hidden md:block">
+
+                        <div className="grid grid-cols-[minmax(240px,0.85fr)_minmax(0,1.15fr)] border-b border-white/10 bg-white/[0.035]">
+
+                          <div className="px-5 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-white/60">
+                            Conteúdo
+                          </div>
+
+                          <div className="border-l border-white/10 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-white/60">
+                            O que o aluno encontrará
+                          </div>
+
+                        </div>
+
+                        {grupo.aulas.map(
+                          (
+                            aula,
+                            index,
+                          ) => (
+                            <article
+                              key={
+                                aula.id
+                              }
+                              className="grid grid-cols-[minmax(240px,0.85fr)_minmax(0,1.15fr)] border-b border-white/10 last:border-b-0"
+                            >
+
+                              <div className="flex gap-3 px-5 py-4">
+
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#59e199]/10 text-xs font-bold text-[#59e199]">
+                                  {String(
+                                    index +
+                                      1,
+                                  ).padStart(
+                                    2,
+                                    "0",
+                                  )}
+                                </div>
+
+                                <h4 className="pt-1 text-sm font-semibold leading-5 text-white">
+                                  {
+                                    aula.titulo
+                                  }
+                                </h4>
+
+                              </div>
+
+                              <div className="border-l border-white/10 px-5 py-4">
+
+                                {aula.descricao ? (
+                                  <p className="text-sm leading-6 text-white/65">
+                                    {
+                                      aula.descricao
+                                    }
+                                  </p>
+                                ) : (
+                                  <span className="text-sm text-white/30">
+                                    —
+                                  </span>
+                                )}
+
+                              </div>
+
+                            </article>
+                          ),
+                        )}
+
+                      </div>
+
+                      {/* MOBILE */}
+
+                      <div className="divide-y divide-white/10 md:hidden">
+
+                        {grupo.aulas.map(
+                          (
+                            aula,
+                            index,
+                          ) => (
+                            <article
+                              key={
+                                aula.id
+                              }
+                              className="p-5"
+                            >
+
+                              <div className="flex items-start gap-3">
+
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#59e199]/10 text-xs font-bold text-[#59e199]">
+                                  {String(
+                                    index +
+                                      1,
+                                  ).padStart(
+                                    2,
+                                    "0",
+                                  )}
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+
+                                  <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/40">
+                                    Conteúdo
+                                  </span>
+
+                                  <h4 className="mt-1 text-sm font-semibold leading-5 text-white">
+                                    {
+                                      aula.titulo
+                                    }
+                                  </h4>
+
+                                  {aula.descricao && (
+                                    <div className="mt-4">
+
+                                      <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#59e199]">
+                                        O que o aluno encontrará
+                                      </span>
+
+                                      <p className="mt-1.5 text-sm leading-6 text-white/65">
+                                        {
+                                          aula.descricao
+                                        }
+                                      </p>
+
+                                    </div>
+                                  )}
+
+                                </div>
+
+                              </div>
+
+                            </article>
+                          ),
+                        )}
+
+                      </div>
+
+                    </div>
+                  ),
+                )}
+
+              </div>
+
             </section>
           )}
 
@@ -1702,9 +2059,9 @@ return (
 
 <div className="training-video-content">
 
- <h3 className="training-video-course-title">
-  {curso.titulo}
-</h3>
+  <h3 className="training-video-course-title">
+    {curso.titulo}
+  </h3>
 
   {/* ===========================================
       PREÇOS
@@ -1767,6 +2124,49 @@ return (
 
 </div>
 </div>
+
+{/* =============================================
+    INFORMAÇÕES FIXAS ABAIXO DO CARD
+============================================= */}
+<div className="mt-3 flex w-full flex-col gap-2 itensimportantes">
+
+  <div className="flex min-h-[42px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#121b27] px-3 py-2.5 text-center text-[11px] font-semibold text-white shadow-sm">
+    <GraduationCap
+      size={16}
+      className="shrink-0 text-[#59e199]"
+    />
+
+    <span>
+      Treinamento profissional
+    </span>
+  </div>
+
+  <div className="flex min-h-[42px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#121b27] px-3 py-2.5 text-center text-[11px] font-semibold text-white shadow-sm">
+    <Clock3
+      size={16}
+      className="shrink-0 text-[#59e199]"
+    />
+
+    <span>
+      Acesso online vitalício
+    </span>
+  </div>
+
+  {professor && (
+    <div className="flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#121b27] px-3 py-2.5 text-center text-[11px] font-semibold text-white shadow-sm">
+      <UserRound
+        size={16}
+        className="shrink-0 text-[#59e199]"
+      />
+
+      <span>
+        {professor.nome}
+      </span>
+    </div>
+  )}
+
+</div>
+
 </aside>
 
         {/* =================================================

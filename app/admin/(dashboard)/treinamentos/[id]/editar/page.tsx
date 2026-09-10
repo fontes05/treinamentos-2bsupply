@@ -85,6 +85,18 @@ type Beneficio = {
   icone: string;
 };
 
+type AulaExtraItem = {
+  id: string;
+  titulo: string;
+  descricao: string;
+};
+
+type GrupoAulaExtra = {
+  id: string;
+  titulo: string;
+  itens: AulaExtraItem[];
+};
+
 type Certificado = {
   id: string;
   titulo: string;
@@ -547,6 +559,18 @@ const [
     );
 
   /* =======================================================
+     AULAS EXTRAS
+  ======================================================= */
+
+  const [
+    gruposAulasExtras,
+    setGruposAulasExtras,
+  ] =
+    useState<
+      GrupoAulaExtra[]
+    >([]);
+
+  /* =======================================================
      BENEFÍCIOS
   ======================================================= */
 
@@ -859,6 +883,128 @@ setLinkInscricao(
             },
           ]);
         }
+
+        /* ===============================================
+           AULAS EXTRAS
+        =============================================== */
+
+        const {
+          data:
+            aulasExtrasData,
+          error:
+            aulasExtrasError,
+        } = await supabase
+          .from(
+            "treinamentos_aulas_extras"
+          )
+          .select(`
+            id,
+            titulo,
+            descricao,
+            ordem,
+            grupo_titulo,
+            grupo_ordem
+          `)
+          .eq(
+            "curso_id",
+            cursoId
+          )
+          .order(
+            "grupo_ordem",
+            {
+              ascending:
+                true,
+            }
+          )
+          .order(
+            "ordem",
+            {
+              ascending:
+                true,
+            }
+          );
+
+        if (
+          aulasExtrasError
+        ) {
+          throw new Error(
+            `Erro ao carregar aulas extras: ${aulasExtrasError.message}`
+          );
+        }
+
+        const gruposMap =
+          new Map<
+            number,
+            GrupoAulaExtra
+          >();
+
+        (
+          aulasExtrasData ??
+          []
+        ).forEach(
+          (item) => {
+            const grupoOrdem =
+              Number(
+                item.grupo_ordem ??
+                  1
+              );
+
+            if (
+              !gruposMap.has(
+                grupoOrdem
+              )
+            ) {
+              gruposMap.set(
+                grupoOrdem,
+                {
+                  id:
+                    generateId(),
+
+                  titulo:
+                    item.grupo_titulo ||
+                    "Aulas Extras",
+
+                  itens: [],
+                }
+              );
+            }
+
+            gruposMap
+              .get(
+                grupoOrdem
+              )
+              ?.itens.push({
+                id:
+                  item.id,
+
+                titulo:
+                  item.titulo ||
+                  "",
+
+                descricao:
+                  item.descricao ||
+                  "",
+              });
+          }
+        );
+
+        setGruposAulasExtras(
+          Array.from(
+            gruposMap.entries()
+          )
+            .sort(
+              (
+                [ordemA],
+                [ordemB]
+              ) =>
+                ordemA -
+                ordemB
+            )
+            .map(
+              ([, grupo]) =>
+                grupo
+            )
+        );
 
         /* ===============================================
            BENEFÍCIOS
@@ -1236,6 +1382,164 @@ setLinkInscricao(
                     valor,
                 }
               : item
+        )
+    );
+  }
+
+  /* =======================================================
+     AULAS EXTRAS
+  ======================================================= */
+
+  function adicionarGrupoAulaExtra() {
+    setGruposAulasExtras(
+      (current) => [
+        ...current,
+
+        {
+          id:
+            generateId(),
+
+          titulo:
+            current.length === 0
+              ? "Aulas Extras"
+              : `Nova seção ${current.length + 1}`,
+
+          itens: [
+            {
+              id:
+                generateId(),
+
+              titulo: "",
+
+              descricao: "",
+            },
+          ],
+        },
+      ]
+    );
+  }
+
+  function removerGrupoAulaExtra(
+    grupoId: string
+  ) {
+    setGruposAulasExtras(
+      (current) =>
+        current.filter(
+          (grupo) =>
+            grupo.id !==
+            grupoId
+        )
+    );
+  }
+
+  function atualizarTituloGrupoAulaExtra(
+    grupoId: string,
+    valor: string
+  ) {
+    setGruposAulasExtras(
+      (current) =>
+        current.map(
+          (grupo) =>
+            grupo.id ===
+            grupoId
+              ? {
+                  ...grupo,
+
+                  titulo:
+                    valor,
+                }
+              : grupo
+        )
+    );
+  }
+
+  function adicionarConteudoAulaExtra(
+    grupoId: string
+  ) {
+    setGruposAulasExtras(
+      (current) =>
+        current.map(
+          (grupo) =>
+            grupo.id ===
+            grupoId
+              ? {
+                  ...grupo,
+
+                  itens: [
+                    ...grupo.itens,
+
+                    {
+                      id:
+                        generateId(),
+
+                      titulo: "",
+
+                      descricao: "",
+                    },
+                  ],
+                }
+              : grupo
+        )
+    );
+  }
+
+  function removerConteudoAulaExtra(
+    grupoId: string,
+    itemId: string
+  ) {
+    setGruposAulasExtras(
+      (current) =>
+        current.map(
+          (grupo) =>
+            grupo.id ===
+            grupoId
+              ? {
+                  ...grupo,
+
+                  itens:
+                    grupo.itens.filter(
+                      (item) =>
+                        item.id !==
+                        itemId
+                    ),
+                }
+              : grupo
+        )
+    );
+  }
+
+  function atualizarConteudoAulaExtra(
+    grupoId: string,
+    itemId: string,
+    campo:
+      | "titulo"
+      | "descricao",
+    valor: string
+  ) {
+    setGruposAulasExtras(
+      (current) =>
+        current.map(
+          (grupo) =>
+            grupo.id ===
+            grupoId
+              ? {
+                  ...grupo,
+
+                  itens:
+                    grupo.itens.map(
+                      (item) =>
+                        item.id ===
+                        itemId
+                          ? {
+                              ...item,
+
+                              [campo]:
+                                valor,
+                            }
+                          : item
+                    ),
+                }
+              : grupo
         )
     );
   }
@@ -2100,6 +2404,99 @@ status,
         ) {
           throw new Error(
             `Erro ao salvar módulos: ${insertModulosError.message}`
+          );
+        }
+      }
+
+      /* ===============================================
+         AULAS EXTRAS
+      =============================================== */
+
+      const {
+        error:
+          deleteAulasExtrasError,
+      } = await supabase
+        .from(
+          "treinamentos_aulas_extras"
+        )
+        .delete()
+        .eq(
+          "curso_id",
+          cursoId
+        );
+
+      if (
+        deleteAulasExtrasError
+      ) {
+        throw new Error(
+          `Erro ao atualizar aulas extras: ${deleteAulasExtrasError.message}`
+        );
+      }
+
+      const aulasExtrasValidas =
+        gruposAulasExtras.flatMap(
+          (
+            grupo,
+            grupoIndex
+          ) =>
+            grupo.itens
+              .filter(
+                (item) =>
+                  item.titulo.trim()
+              )
+              .map(
+                (
+                  item,
+                  itemIndex
+                ) => ({
+                  curso_id:
+                    cursoId,
+
+                  grupo_titulo:
+                    grupo.titulo.trim() ||
+                    "Aulas Extras",
+
+                  grupo_ordem:
+                    grupoIndex +
+                    1,
+
+                  titulo:
+                    item.titulo.trim(),
+
+                  descricao:
+                    item.descricao?.trim() ||
+                    null,
+
+                  ordem:
+                    itemIndex +
+                    1,
+
+                  ativo:
+                    true,
+                })
+              )
+        );
+
+      if (
+        aulasExtrasValidas.length >
+        0
+      ) {
+        const {
+          error:
+            insertAulasExtrasError,
+        } = await supabase
+          .from(
+            "treinamentos_aulas_extras"
+          )
+          .insert(
+            aulasExtrasValidas
+          );
+
+        if (
+          insertAulasExtrasError
+        ) {
+          throw new Error(
+            `Erro ao salvar aulas extras: ${insertAulasExtrasError.message}`
           );
         }
       }
@@ -3206,6 +3603,319 @@ status,
             </Card>
 
             {/* =============================================
+                AULAS EXTRAS
+            ============================================= */}
+
+            <div className="space-y-6">
+
+              {gruposAulasExtras.length ===
+                0 && (
+                <Card>
+                  <CardContent className="p-8">
+
+                    <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 p-8 text-center">
+
+                      <Video
+                        size={28}
+                        className="mx-auto text-zinc-300"
+                      />
+
+                      <h3 className="mt-3 font-semibold text-zinc-800">
+                        Aulas Extras
+                      </h3>
+
+                      <p className="mt-1 text-sm text-zinc-500">
+                        Crie uma seção para cadastrar conteúdos complementares do treinamento.
+                      </p>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="mt-5"
+                        onClick={
+                          adicionarGrupoAulaExtra
+                        }
+                        disabled={
+                          salvando
+                        }
+                      >
+                        <Plus
+                          size={16}
+                        />
+
+                        Adicionar aula extra
+                      </Button>
+
+                    </div>
+
+                  </CardContent>
+                </Card>
+              )}
+
+              {gruposAulasExtras.map(
+                (
+                  grupo,
+                  grupoIndex
+                ) => (
+                  <Card
+                    key={
+                      grupo.id
+                    }
+                  >
+                    <CardHeader>
+
+                      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+
+                        <div className="flex min-w-0 flex-1 items-start gap-3">
+
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                            <Video
+                              size={20}
+                            />
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+
+                            <Label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-zinc-400">
+                              Título da seção
+                            </Label>
+
+                            <Input
+                              value={
+                                grupo.titulo
+                              }
+                              onChange={(
+                                event
+                              ) =>
+                                atualizarTituloGrupoAulaExtra(
+                                  grupo.id,
+                                  event.target.value
+                                )
+                              }
+                              placeholder="Ex.: Aulas Extras"
+                              disabled={
+                                salvando
+                              }
+                              className="h-auto border-0 bg-transparent p-0 text-base font-semibold text-zinc-950 shadow-none focus-visible:ring-0 md:text-base"
+                            />
+
+                            <CardDescription className="mt-1">
+                              Cadastre os conteúdos complementares e explique o que o aluno encontrará em cada aula.
+                            </CardDescription>
+
+                          </div>
+
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-2">
+
+                          {grupoIndex ===
+                            0 && (
+                            <Button
+                              type="button"
+                              onClick={
+                                adicionarGrupoAulaExtra
+                              }
+                              disabled={
+                                salvando
+                              }
+                              className="bg-zinc-950 text-white hover:bg-zinc-800"
+                            >
+                              <Plus
+                                size={16}
+                              />
+
+                              Adicionar aula extra
+                            </Button>
+                          )}
+
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              removerGrupoAulaExtra(
+                                grupo.id
+                              )
+                            }
+                            disabled={
+                              salvando
+                            }
+                            className="text-zinc-400 hover:bg-red-50 hover:text-red-600"
+                            title="Excluir esta seção"
+                          >
+                            <Trash2
+                              size={17}
+                            />
+                          </Button>
+
+                        </div>
+
+                      </div>
+
+                    </CardHeader>
+
+                    <CardContent>
+
+                      <div className="overflow-x-auto">
+
+                        <div className="min-w-[760px] overflow-hidden rounded-xl border border-zinc-200">
+
+                          {/* CABEÇALHO DA TABELA */}
+
+                          <div className="grid grid-cols-[minmax(260px,0.85fr)_minmax(380px,1.15fr)_52px] border-b border-zinc-200 bg-zinc-100">
+
+                            <div className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-zinc-600">
+                              Conteúdo
+                            </div>
+
+                            <div className="border-l border-zinc-200 px-4 py-3 text-xs font-bold uppercase tracking-wide text-zinc-600">
+                              O que o aluno encontrará
+                            </div>
+
+                            <div className="border-l border-zinc-200" />
+
+                          </div>
+
+                          {/* CONTEÚDOS */}
+
+                          {grupo.itens.map(
+                            (
+                              item,
+                              itemIndex
+                            ) => (
+                              <div
+                                key={
+                                  item.id
+                                }
+                                className="grid grid-cols-[minmax(260px,0.85fr)_minmax(380px,1.15fr)_52px] border-b border-zinc-200 bg-white last:border-b-0"
+                              >
+
+                                <div className="p-3">
+
+                                  <Label className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-zinc-400">
+                                    Conteúdo {itemIndex + 1}
+                                  </Label>
+
+                                  <Textarea
+                                    value={
+                                      item.titulo
+                                    }
+                                    onChange={(
+                                      event
+                                    ) =>
+                                      atualizarConteudoAulaExtra(
+                                        grupo.id,
+                                        item.id,
+                                        "titulo",
+                                        event.target.value
+                                      )
+                                    }
+                                    placeholder="Ex.: O que são Prompts e como usá-los em Suprimentos"
+                                    className="min-h-[86px] resize-y bg-white"
+                                    disabled={
+                                      salvando
+                                    }
+                                  />
+
+                                </div>
+
+                                <div className="border-l border-zinc-200 p-3">
+
+                                  <Label className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-zinc-400">
+                                    Descrição
+                                  </Label>
+
+                                  <Textarea
+                                    value={
+                                      item.descricao
+                                    }
+                                    onChange={(
+                                      event
+                                    ) =>
+                                      atualizarConteudoAulaExtra(
+                                        grupo.id,
+                                        item.id,
+                                        "descricao",
+                                        event.target.value
+                                      )
+                                    }
+                                    placeholder="Explique de forma objetiva o que o aluno encontrará neste conteúdo..."
+                                    className="min-h-[86px] resize-y bg-white"
+                                    disabled={
+                                      salvando
+                                    }
+                                  />
+
+                                </div>
+
+                                <div className="flex items-center justify-center border-l border-zinc-200">
+
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      removerConteudoAulaExtra(
+                                        grupo.id,
+                                        item.id
+                                      )
+                                    }
+                                    disabled={
+                                      salvando
+                                    }
+                                    className="text-zinc-400 hover:bg-red-50 hover:text-red-600"
+                                    title="Excluir conteúdo"
+                                  >
+                                    <Trash2
+                                      size={17}
+                                    />
+                                  </Button>
+
+                                </div>
+
+                              </div>
+                            )
+                          )}
+
+                          {grupo.itens.length ===
+                            0 && (
+                            <div className="bg-white px-5 py-8 text-center text-sm text-zinc-400">
+                              Nenhum conteúdo nesta seção.
+                            </div>
+                          )}
+
+                        </div>
+
+                      </div>
+
+                      <Button
+                        type="button"
+                        onClick={() =>
+                          adicionarConteudoAulaExtra(
+                            grupo.id
+                          )
+                        }
+                        disabled={
+                          salvando
+                        }
+                        className="mt-4 w-full bg-zinc-950 text-white hover:bg-zinc-800"
+                      >
+                        <Plus
+                          size={16}
+                        />
+
+                        Adicionar outro conteúdo
+                      </Button>
+
+                    </CardContent>
+                  </Card>
+                )
+              )}
+
+            </div>
+
+            {/* =============================================
                 BENEFÍCIOS
             ============================================= */}
 
@@ -3937,6 +4647,29 @@ status,
                         ) =>
                           item.titulo.trim()
                       ).length
+                    }
+                  </Badge>
+                </div>
+
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-500">
+                    Aulas extras
+                  </span>
+
+                  <Badge variant="secondary">
+                    {
+                      gruposAulasExtras.reduce(
+                        (
+                          total,
+                          grupo
+                        ) =>
+                          total +
+                          grupo.itens.filter(
+                            (item) =>
+                              item.titulo.trim()
+                          ).length,
+                        0
+                      )
                     }
                   </Badge>
                 </div>

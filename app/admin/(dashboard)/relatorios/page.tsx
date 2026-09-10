@@ -169,6 +169,59 @@ function normalizarRelatorio(
   }));
 }
 
+/* =========================================================
+   FORMATAR ORIGEM GA4
+========================================================= */
+
+function formatarOrigemResumoGA4(
+  origem: string
+) {
+  const valor =
+    origem
+      ?.trim()
+      .toLowerCase();
+
+  if (
+    valor ===
+      "não identificado" ||
+    valor ===
+      "(not set)" ||
+    valor ===
+      "not set"
+  ) {
+    return {
+      nome:
+        "Origem não identificada",
+
+      descricao:
+        "O GA4 não conseguiu determinar a origem",
+    };
+  }
+
+  if (
+    valor ===
+      "(data not available)" ||
+    valor ===
+      "data not available"
+  ) {
+    return {
+      nome:
+        "Dados de origem indisponíveis",
+
+      descricao:
+        "O Google não disponibilizou a origem desta sessão",
+    };
+  }
+
+  return {
+    nome:
+      origem,
+
+    descricao:
+      "",
+  };
+}
+
 /* ---------------------------------------------------------
    FORMATAR NÚMERO
 --------------------------------------------------------- */
@@ -180,6 +233,154 @@ function formatarNumero(
     "pt-BR"
   ).format(valor);
 }
+
+
+/* =========================================================
+   HELPERS - CANAIS GA4
+========================================================= */
+
+const NOMES_CANAIS_GA4: Record<string, string> = {
+  Direct: "Direto",
+  "Organic Search": "Busca orgânica",
+  "Paid Search": "Busca paga",
+  "Organic Social": "Social orgânico",
+  "Paid Social": "Social pago",
+  Referral: "Referência",
+  "Cross-network": "Campanhas multicanal",
+  Email: "E-mail",
+  Affiliates: "Afiliados",
+  Display: "Display",
+  "Organic Video": "Vídeo orgânico",
+  "Paid Video": "Vídeo pago",
+  Audio: "Áudio",
+  SMS: "SMS",
+  Unassigned: "Não identificado",
+};
+
+function traduzirCanalGA4(
+  canal: string
+) {
+  return (
+    NOMES_CANAIS_GA4[
+      canal
+    ] ?? canal
+  );
+}
+
+function dadoGA4Disponivel(
+  value:
+    | string
+    | null
+    | undefined
+) {
+  if (!value) {
+    return false;
+  }
+
+  const normalizado =
+    value
+      .trim()
+      .toLowerCase();
+
+  return ![
+    "(not set)",
+    "(data not available)",
+    "not set",
+    "data not available",
+    "undefined",
+    "null",
+  ].includes(
+    normalizado
+  );
+}
+
+function formatarOrigemGA4(
+  item: AnalyticsCanal
+) {
+  const origem =
+    dadoGA4Disponivel(
+      item.origemOriginal
+    )
+      ? item.origemOriginal
+      : dadoGA4Disponivel(
+            item.origem
+          )
+        ? item.origem
+        : null;
+
+  /* ACESSO DIRETO */
+
+  if (
+    item.canal ===
+    "Direct"
+  ) {
+    return "Acesso direto ao site";
+  }
+
+  /* SEM ORIGEM */
+
+  if (!origem) {
+    return "Origem não identificada pelo GA4";
+  }
+
+  const normalizada =
+    origem.toLowerCase();
+
+  /* REDES SOCIAIS */
+
+  if (
+    normalizada.includes(
+      "linkedin"
+    )
+  ) {
+    return "LinkedIn";
+  }
+
+  if (
+    normalizada.includes(
+      "instagram"
+    )
+  ) {
+    return "Instagram";
+  }
+
+  if (
+    normalizada.includes(
+      "facebook"
+    )
+  ) {
+    return "Facebook";
+  }
+
+  if (
+    normalizada.includes(
+      "youtube"
+    )
+  ) {
+    return "YouTube";
+  }
+
+  if (
+    normalizada.includes(
+      "whatsapp"
+    )
+  ) {
+    return "WhatsApp";
+  }
+
+  if (
+    normalizada.includes(
+      "tiktok"
+    )
+  ) {
+    return "TikTok";
+  }
+
+  /* OUTRAS ORIGENS */
+
+  return origem;
+}
+
 
 /* =========================================================
    DATAS
@@ -988,6 +1189,85 @@ const redesSociais = useMemo(() => {
   });
 }, [analytics.origens]);
 
+
+/* =======================================================
+   CANAIS DE AQUISIÇÃO
+======================================================= */
+
+const canaisAquisicao =
+  useMemo(() => {
+    const totalSessoes =
+      analytics.canais.reduce(
+        (
+          total,
+          item
+        ) =>
+          total +
+          Number(
+            item.sessoes ??
+              0
+          ),
+        0
+      );
+
+    return [
+      ...analytics.canais,
+    ]
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          Number(
+            b.sessoes
+          ) -
+          Number(
+            a.sessoes
+          )
+      )
+      .map(
+        (
+          item
+        ) => {
+          const sessoes =
+            Number(
+              item.sessoes ??
+                0
+            );
+
+          const percentual =
+            totalSessoes >
+            0
+              ? Math.round(
+                  (sessoes /
+                    totalSessoes) *
+                    100
+                )
+              : 0;
+
+          return {
+            ...item,
+
+            sessoes,
+
+            percentual,
+
+            nome:
+              traduzirCanalGA4(
+                item.canal
+              ),
+
+            detalhe:
+              formatarOrigemGA4(
+                item
+              ),
+          };
+        }
+      );
+  }, [
+    analytics.canais,
+  ]);
+
   /* =======================================================
      INSCRIÇÃO POR ORIGEM DISPONÍVEL?
   ======================================================= */
@@ -1498,147 +1778,284 @@ const redesSociais = useMemo(() => {
 
           <div className="mb-6 grid gap-6 xl:grid-cols-2">
 
-            {/* ===============================================
-                DE ONDE VIERAM
-            =============================================== */}
+           {/* ===============================================
+    DE ONDE VIERAM
+=============================================== */}
 
-            <AnalyticsCard
-              titulo="De onde vieram"
-              descricao="Participação das origens nas sessões do site."
-              icon={Globe2}
-            >
-              {analytics.origens.length ===
-              0 ? (
-                <AnalyticsEmpty />
-              ) : (
-                <div className="space-y-5">
-
-                  {analytics.origens
-                    .slice(0, 10)
-                    .map(
-                      (item) => (
-                        <div
-                          key={
-                            item.origem
-                          }
-                        >
-                          <div className="mb-2 flex items-center justify-between gap-4">
-
-                            <div>
-                              <strong className="text-sm text-zinc-800">
-                                {
-                                  item.origem
-                                }
-                              </strong>
-
-                              <span className="ml-2 text-xs text-zinc-400">
-                                {formatarNumero(
-                                  item.sessoes
-                                )}{" "}
-                                sessões
-                              </span>
-                            </div>
-
-                            <strong className="text-sm text-[#667cf8]">
-                              {
-                                item.percentual
-                              }
-                              %
-                            </strong>
-
-                          </div>
-
-                          <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
-
-                            <div
-                              className="h-full rounded-full bg-[#667cf8] transition-all"
-                              style={{
-                                width: `${Math.min(
-                                  Math.max(
-                                    item.percentual,
-                                    0
-                                  ),
-                                  100
-                                )}%`,
-                              }}
-                            />
-
-                          </div>
-                        </div>
-                      )
-                    )}
-
-                </div>
-              )}
-            </AnalyticsCard>
-
-            {/* ===============================================
-                CANAIS
-            =============================================== */}
-
-            <AnalyticsCard
-              titulo="Canais de aquisição"
-              descricao="Como o GA4 classifica o tipo de tráfego recebido."
-              icon={Network}
-            >
-              {analytics.canais.length ===
-              0 ? (
-                <AnalyticsEmpty />
-              ) : (
-                <div className="divide-y divide-zinc-100">
-
-                  {analytics.canais
-                    .slice(0, 10)
-                    .map(
-                      (item) => (
-                        <div
-                          key={
-                            item.canal
-                          }
-                          className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
-                        >
-
-<div
-  key={item.origemMidia}
-  className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+<AnalyticsCard
+  titulo="De onde vieram"
+  descricao="Participação das origens nas sessões do site."
+  icon={Globe2}
 >
-  <div>
+  {analytics.origens.length === 0 ? (
+    <AnalyticsEmpty />
+  ) : (
+    <div className="space-y-5">
 
-    <div className="flex items-center gap-2">
+      {analytics.origens
+        .slice(0, 10)
+        .map((item) => {
+          const origemFormatada =
+            formatarOrigemResumoGA4(
+              item.origem
+            );
 
-      <span className="text-sm font-semibold text-zinc-800">
-        {item.canal}
-      </span>
+          return (
+            <div
+              key={item.origem}
+            >
 
-      {item.canal ===
-        "Unassigned" && (
-        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-          verificar
-        </span>
-      )}
+              <div className="mb-2 flex items-start justify-between gap-4">
 
-    </div>
+                <div>
 
-    <div className="mt-1 text-xs text-zinc-400">
-      {item.origemMidia}
-    </div>
+                  <div className="flex flex-wrap items-center gap-2">
 
-  </div>
+                    <strong className="text-sm text-zinc-800">
+                      {
+                        origemFormatada.nome
+                      }
+                    </strong>
 
-  <strong className="text-sm text-zinc-950">
-    {formatarNumero(
-      item.sessoes
-    )}
-  </strong>
-</div>
+                    <span className="text-xs text-zinc-400">
+                      {formatarNumero(
+                        item.sessoes
+                      )}{" "}
+                      sessões
+                    </span>
 
-                        </div>
-                      )
-                    )}
+                  </div>
+
+                  {origemFormatada.descricao && (
+                    <span className="mt-1 block text-[11px] leading-4 text-zinc-400">
+                      {
+                        origemFormatada.descricao
+                      }
+                    </span>
+                  )}
 
                 </div>
-              )}
-            </AnalyticsCard>
+
+                <strong className="shrink-0 text-sm text-[#667cf8]">
+                  {
+                    item.percentual
+                  }
+                  %
+                </strong>
+
+              </div>
+
+              <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+
+                <div
+                  className="h-full rounded-full bg-[#667cf8] transition-all"
+                  style={{
+                    width: `${Math.min(
+                      Math.max(
+                        item.percentual,
+                        0
+                      ),
+                      100
+                    )}%`,
+                  }}
+                />
+
+              </div>
+
+            </div>
+          );
+        })}
+
+    </div>
+  )}
+</AnalyticsCard>
+    {/* ===============================================
+    CANAIS
+=============================================== */}
+
+<AnalyticsCard
+  titulo="Canais de aquisição"
+  descricao="Como os visitantes chegaram ao site."
+  icon={Network}
+>
+  {canaisAquisicao.length ===
+  0 ? (
+    <AnalyticsEmpty />
+  ) : (
+    <div className="space-y-3">
+
+      {/* RESUMO */}
+
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-zinc-50 px-4 py-3">
+
+        <div>
+
+          <span className="block text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+            Sessões analisadas
+          </span>
+
+          <strong className="mt-0.5 block text-lg font-bold text-zinc-900">
+            {formatarNumero(
+              canaisAquisicao.reduce(
+                (
+                  total,
+                  item
+                ) =>
+                  total +
+                  item.sessoes,
+                0
+              )
+            )}
+          </strong>
+
+        </div>
+
+        <div className="text-right">
+
+          <span className="block text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+            Canais encontrados
+          </span>
+
+          <strong className="mt-0.5 block text-lg font-bold text-[#667cf8]">
+            {
+              canaisAquisicao.length
+            }
+          </strong>
+
+        </div>
+
+      </div>
+
+      {/* LISTA */}
+
+      {canaisAquisicao
+        .slice(
+          0,
+          10
+        )
+        .map(
+          (
+            item,
+            index
+          ) => {
+            const naoIdentificado =
+              item.canal ===
+              "Unassigned";
+
+            return (
+              <div
+                key={`${item.canal}-${item.origemMidia}-${index}`}
+                className="
+                  rounded-xl
+                  border border-zinc-100
+                  bg-white
+                  p-4
+                  transition
+                  hover:border-zinc-200
+                  hover:bg-zinc-50/50
+                "
+              >
+
+                {/* CABEÇALHO */}
+
+                <div className="flex items-start justify-between gap-4">
+
+                  <div className="min-w-0">
+
+                    <div className="flex flex-wrap items-center gap-2">
+
+                      <strong className="text-sm font-bold text-zinc-900">
+                        {
+                          item.nome
+                        }
+                      </strong>
+
+                      {naoIdentificado && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">
+                          Revisar origem
+                        </span>
+                      )}
+
+                    </div>
+
+                    <span className="mt-1 block text-xs text-zinc-400">
+                      {
+                        item.detalhe
+                      }
+                    </span>
+
+                  </div>
+
+                  <div className="shrink-0 text-right">
+
+                    <strong className="block text-base font-bold text-zinc-950">
+                      {formatarNumero(
+                        item.sessoes
+                      )}
+                    </strong>
+
+                    <span className="block text-[11px] text-zinc-400">
+                      sessões
+                    </span>
+
+                  </div>
+
+                </div>
+
+                {/* PARTICIPAÇÃO */}
+
+                <div className="mt-3">
+
+                  <div className="mb-1.5 flex items-center justify-between">
+
+                    <strong className="text-xs font-bold text-[#667cf8]">
+                      {
+                        item.percentual
+                      }
+                      %
+                    </strong>
+
+                  </div>
+
+                  <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
+
+                    <div
+                      className="h-full rounded-full bg-[#667cf8] transition-all"
+                      style={{
+                        width: `${Math.min(
+                          Math.max(
+                            item.percentual,
+                            0
+                          ),
+                          100
+                        )}%`,
+                      }}
+                    />
+
+                  </div>
+
+                </div>
+
+                {/* AVISO */}
+
+                {naoIdentificado && (
+                  <div className="mt-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5">
+
+                    <p className="text-[11px] leading-5 text-amber-700">
+                      O Google Analytics recebeu estas visitas, mas não conseguiu identificar corretamente a origem. Isso pode acontecer quando os links não possuem parâmetros UTM ou quando os dados de referência não estão disponíveis.
+                    </p>
+
+                  </div>
+                )}
+
+              </div>
+            );
+          }
+        )}
+
+    </div>
+  )}
+</AnalyticsCard>
 
           </div>
 
