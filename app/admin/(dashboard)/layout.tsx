@@ -9,6 +9,7 @@ import {
   BookOpen,
   ChartNoAxesCombined,
   ChevronDown,
+  CircleDollarSign,
   FileText,
   GraduationCap,
   ImageIcon,
@@ -34,9 +35,6 @@ export default function AdminLayout({
 
   const treinamentosAberto =
     pathname.startsWith("/admin/treinamentos");
-
-  const videosAberto =
-    pathname.startsWith("/admin/videos");
 
   /* =====================================================
      MENU PADRÃO
@@ -73,6 +71,11 @@ export default function AdminLayout({
     href: "/admin/relatorios",
     icon: ChartNoAxesCombined,
   },
+  {
+  title: "Custos e Rentabilidade",
+  href: "/admin/rentabilidade",
+  icon: CircleDollarSign,
+},
   {
     title: "Conteúdos",
     href: "/admin/conteudos",
