@@ -320,6 +320,11 @@ const [
   setSeoPalavraChave,
 ] = useState("");
 
+const [
+  botaoCompraHtml,
+  setBotaoCompraHtml,
+] = useState("");
+
   const [status, setStatus] =
     useState<StatusTreinamento>(
       "rascunho"
@@ -1167,6 +1172,10 @@ const [
 
     seo_palavra_chave:
       seoPalavraChave.trim() ||
+      null,
+
+    botao_compra_html:
+      botaoCompraHtml.trim() ||
       null,
 
     imagem_url: null,
@@ -3710,6 +3719,71 @@ setTimeout(() => {
                     }
                   </p>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* =============================================
+                BOTÃO DE COMPRA / HOTMART
+            ============================================= */}
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Botão de compra
+                </CardTitle>
+
+                <CardDescription>
+                  Configure um botão personalizado para checkout externo, como a Hotmart.
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="botao-compra-html">
+                    HTML do botão
+                  </Label>
+
+                  <Textarea
+                    id="botao-compra-html"
+                    value={botaoCompraHtml}
+                    onChange={(event) =>
+                      setBotaoCompraHtml(
+                        event.target.value
+                      )
+                    }
+                    placeholder={'<a href="https://pay.hotmart.com/..." class="hotmart-fb hotmart__button-checkout">Comprar agora</a>'}
+                    className="min-h-[180px] resize-y font-mono text-xs leading-5"
+                    disabled={salvando}
+                    spellCheck={false}
+                  />
+
+                  <p className="text-xs leading-5 text-zinc-500">
+                    Opcional. Quando preenchido, este HTML substitui o botão padrão
+                    na página individual do treinamento.
+                  </p>
+                </div>
+
+                {botaoCompraHtml.trim() && (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <div className="flex items-start gap-2">
+                      <CircleCheck
+                        size={16}
+                        className="mt-0.5 shrink-0 text-emerald-600"
+                      />
+
+                      <p className="text-xs leading-5 text-emerald-800">
+                        Este treinamento utilizará um botão de compra personalizado.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-xs leading-5 text-amber-800">
+                    Para Hotmart, cole somente o código do botão
+                    &lt;a&gt;...&lt;/a&gt;. Não inclua o &lt;script&gt; neste campo.
+                  </p>
+                </div>
               </CardContent>
             </Card>
 

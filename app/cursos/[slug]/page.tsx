@@ -56,6 +56,10 @@ type CursoSeo = {
     | string
     | null;
 
+  botao_compra_html:
+    | string
+    | null;
+
   status:
     | string
     | null;
@@ -100,7 +104,7 @@ function getSupabase() {
 }
 
 /* =========================================================
-   BUSCAR DADOS DE SEO DO CURSO
+   BUSCAR CURSO
 ========================================================= */
 
 const getCursoSeo = cache(
@@ -131,6 +135,7 @@ const getCursoSeo = cache(
         imagem_url,
         preco_para,
         link_inscricao,
+        botao_compra_html,
         status
       `)
       .eq(
@@ -205,6 +210,37 @@ function limitarTexto(
 }
 
 /* =========================================================
+   PEGAR URL DO HTML HOTMART
+========================================================= */
+
+function extrairUrlBotaoCompra(
+  html:
+    | string
+    | null
+    | undefined,
+) {
+  if (!html) {
+    return null;
+  }
+
+  const href =
+    html.match(
+      /href\s*=\s*["']([^"']+)["']/i,
+    );
+
+  if (!href?.[1]) {
+    return null;
+  }
+
+  return href[1]
+    .replace(
+      /&amp;/g,
+      "&",
+    )
+    .trim();
+}
+
+/* =========================================================
    METADATA / SEO
 ========================================================= */
 
@@ -225,9 +261,6 @@ export async function generateMetadata({
       slug,
     )}`;
 
-  /*
-   * Curso inexistente ou não publicado.
-   */
   if (!curso) {
     return {
       title:
@@ -281,7 +314,8 @@ export async function generateMetadata({
     );
 
   return {
-    title: titulo,
+    title:
+      titulo,
 
     description:
       descricao,
@@ -358,10 +392,13 @@ export async function generateMetadata({
       googleBot: {
         index: true,
         follow: true,
+
         "max-image-preview":
           "large",
+
         "max-snippet":
           -1,
+
         "max-video-preview":
           -1,
       },
@@ -389,6 +426,49 @@ export default async function TreinamentoPage({
     `${SITE_URL}/cursos/${encodeURIComponent(
       slug,
     )}`;
+
+  /* =======================================================
+     BOTÃO DE COMPRA
+  ======================================================= */
+
+  /*
+   * PRIORIDADE:
+   *
+   * 1. HTML Hotmart
+   * 2. Link normal do curso
+   */
+
+  /*
+   * O HTML salvo no Admin é usado COMPLETO.
+   *
+   * Não extraímos o link e não reconstruímos o botão.
+   * Se existir HTML, ele terá prioridade sobre link_inscricao.
+   */
+  const botaoCompraHtml =
+    curso?.botao_compra_html?.trim() ||
+    null;
+
+  /*
+   * URL da oferta para Schema.org.
+   *
+   * Se existe Hotmart, usamos a URL que está
+   * dentro do botão Hotmart.
+   *
+   * Caso contrário usamos link_inscricao.
+   */
+  const urlBotaoHotmart =
+    extrairUrlBotaoCompra(
+      botaoCompraHtml,
+    );
+
+  const urlOferta =
+    urlBotaoHotmart ||
+    curso?.link_inscricao ||
+    canonicalUrl;
+
+  /* =======================================================
+     SCHEMA.ORG
+  ======================================================= */
 
   const schema =
     curso
@@ -447,8 +527,7 @@ export default async function TreinamentoPage({
                     ),
 
                   url:
-                    curso.link_inscricao ||
-                    canonicalUrl,
+                    urlOferta,
 
                   availability:
                     "https://schema.org/InStock",
@@ -460,6 +539,10 @@ export default async function TreinamentoPage({
 
   return (
     <>
+      {/* ===============================================
+          SCHEMA.ORG
+      =============================================== */}
+
       {schema && (
         <script
           type="application/ld+json"
@@ -475,7 +558,15 @@ export default async function TreinamentoPage({
         />
       )}
 
-      <TreinamentoClient />
+      {/* ===============================================
+          PÁGINA DO TREINAMENTO
+      =============================================== */}
+
+      <TreinamentoClient
+        botaoCompraHtml={
+          botaoCompraHtml
+        }
+      />
     </>
   );
 }

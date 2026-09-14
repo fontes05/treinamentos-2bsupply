@@ -507,6 +507,11 @@ const [
   setNomeBotaoCurso,
 ] = useState("Inscreva-se agora");
 
+const [
+  botaoCompraHtml,
+  setBotaoCompraHtml,
+] = useState("");
+
   /* =======================================================
      IMAGEM DO CURSO
   ======================================================= */
@@ -751,6 +756,7 @@ preco_para,
 parcelamento,
 link_inscricao,
 nome_botao_curso,
+botao_compra_html,
 categoria_id,
 status
 `)
@@ -911,6 +917,11 @@ setLinkInscricao(
 setNomeBotaoCurso(
   curso.nome_botao_curso ||
     "Inscreva-se agora"
+);
+
+setBotaoCompraHtml(
+  curso.botao_compra_html ||
+    ""
 );
 
         setStatus(
@@ -2358,6 +2369,10 @@ link_inscricao:
 nome_botao_curso:
   nomeBotaoCurso.trim() ||
   "Inscreva-se agora",
+
+botao_compra_html:
+  botaoCompraHtml.trim() ||
+  null,
 
 status,
         })
@@ -5419,7 +5434,7 @@ status,
     </CardTitle>
 
     <CardDescription>
-      Configure o valor e o link utilizado no botão Me inscrever.
+      Configure o valor, o link e, quando necessário, um botão de compra personalizado.
     </CardDescription>
   </CardHeader>
 
@@ -5505,29 +5520,28 @@ status,
       </p>
     </div>
 
-{/* NOME DO BOTÃO */}
+    {/* NOME DO BOTÃO */}
 
-<div className="space-y-2">
-  <Label>
-    Nome do botão do curso
-  </Label>
+    <div className="space-y-2">
+      <Label>
+        Nome do botão do curso
+      </Label>
 
-  <Input
-    value={nomeBotaoCurso}
-    onChange={(event) =>
-      setNomeBotaoCurso(
-        event.target.value
-      )
-    }
-    placeholder="Ex.: Inscreva-se agora"
-    disabled={salvando}
-  />
+      <Input
+        value={nomeBotaoCurso}
+        onChange={(event) =>
+          setNomeBotaoCurso(
+            event.target.value
+          )
+        }
+        placeholder="Ex.: Inscreva-se agora"
+        disabled={salvando}
+      />
 
-  <p className="text-xs text-zinc-400">
-    Texto exibido no botão principal do curso.
-  </p>
-</div>
-
+      <p className="text-xs text-zinc-400">
+        Usado no botão padrão quando não houver HTML personalizado.
+      </p>
+    </div>
 
     {/* LINK */}
 
@@ -5549,11 +5563,44 @@ status,
       />
 
       <p className="text-xs text-zinc-400">
-        Este endereço será utilizado no botão
-        <strong className="ml-1 font-semibold text-zinc-600">
-          Me inscrever
-        </strong>.
+        Endereço utilizado pelo botão padrão do curso.
       </p>
+    </div>
+
+    <Separator />
+
+    {/* HTML DO BOTÃO / HOTMART */}
+
+    <div className="space-y-2">
+      <Label htmlFor="botao-compra-html">
+        HTML do botão de compra
+      </Label>
+
+      <Textarea
+        id="botao-compra-html"
+        value={botaoCompraHtml}
+        onChange={(event) =>
+          setBotaoCompraHtml(
+            event.target.value
+          )
+        }
+        placeholder={'<a href="https://pay.hotmart.com/..." class="hotmart-fb hotmart__button-checkout">Comprar agora</a>'}
+        className="min-h-[180px] resize-y font-mono text-xs leading-5"
+        disabled={salvando}
+        spellCheck={false}
+      />
+
+      <p className="text-xs leading-5 text-zinc-500">
+        Opcional. Quando preenchido, este HTML substitui o botão padrão
+        na página individual do treinamento.
+      </p>
+
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+        <p className="text-xs leading-5 text-amber-800">
+          Para Hotmart, cole somente o código do botão
+          &lt;a&gt;...&lt;/a&gt;. Não inclua o &lt;script&gt; neste campo.
+        </p>
+      </div>
     </div>
   </CardContent>
 </Card>

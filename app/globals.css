@@ -1491,7 +1491,11 @@ text-transform: uppercase;
     display: inline-block;
     line-height: 1.1rem;
 }
-
+.hotmart__button-checkout{
+    width: 100%;
+    text-align: center;
+    border-radius: 40px!important;
+}
 .course-content h3 {
     min-height: 45px;
     margin: 8px 0 7px;
