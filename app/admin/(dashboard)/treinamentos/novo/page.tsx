@@ -28,6 +28,7 @@ import {
   LoaderCircle,
   Plus,
   Save,
+  Search,
   Sparkles,
   Target,
   Trash2,
@@ -269,6 +270,28 @@ export default function NovoTreinamentoPage() {
     useState("");
 
   const [
+    tituloPaginaIndividual,
+    setTituloPaginaIndividual,
+  ] = useState("");
+
+  const [
+    descricaoPaginaIndividual,
+    setDescricaoPaginaIndividual,
+  ] = useState("");
+
+  const [
+    linhaDestaqueCard,
+    setLinhaDestaqueCard,
+  ] = useState("");
+
+  const [
+    voceVaiAprender,
+    setVoceVaiAprender,
+  ] = useState<string[]>([
+    "",
+  ]);
+
+  const [
     publicoAlvo,
     setPublicoAlvo,
   ] = useState("");
@@ -277,6 +300,25 @@ export default function NovoTreinamentoPage() {
     porqueAprender,
     setPorqueAprender,
   ] = useState("");
+
+/* =======================================================
+   SEO
+======================================================= */
+
+const [
+  seoTitulo,
+  setSeoTitulo,
+] = useState("");
+
+const [
+  seoDescricao,
+  setSeoDescricao,
+] = useState("");
+
+const [
+  seoPalavraChave,
+  setSeoPalavraChave,
+] = useState("");
 
   const [status, setStatus] =
     useState<StatusTreinamento>(
@@ -485,6 +527,66 @@ export default function NovoTreinamentoPage() {
 
     void carregarCategorias();
   }, []);
+
+  /* =======================================================
+     VOCÊ VAI APRENDER
+  ======================================================= */
+
+  function adicionarItemVoceVaiAprender() {
+    if (
+      voceVaiAprender.length >=
+      6
+    ) {
+      return;
+    }
+
+    setVoceVaiAprender(
+      (current) => [
+        ...current,
+        "",
+      ]
+    );
+  }
+
+  function removerItemVoceVaiAprender(
+    index: number
+  ) {
+    setVoceVaiAprender(
+      (current) => {
+        if (
+          current.length <=
+          1
+        ) {
+          return [""];
+        }
+
+        return current.filter(
+          (_, itemIndex) =>
+            itemIndex !==
+            index
+        );
+      }
+    );
+  }
+
+  function atualizarItemVoceVaiAprender(
+    index: number,
+    valor: string
+  ) {
+    setVoceVaiAprender(
+      (current) =>
+        current.map(
+          (
+            item,
+            itemIndex
+          ) =>
+            itemIndex ===
+            index
+              ? valor
+              : item
+        )
+    );
+  }
 
   /* =======================================================
      MÓDULOS
@@ -1010,48 +1112,78 @@ export default function NovoTreinamentoPage() {
       =================================================== */
 
       const {
-        data: curso,
-        error: cursoError,
-      } = await supabase
-        .from(
-          "treinamentos_cursos"
+  data: curso,
+  error: cursoError,
+} = await supabase
+  .from("treinamentos_cursos")
+  .insert({
+    titulo:
+      titulo.trim(),
+
+    slug,
+
+    categoria_id:
+      Number(categoriaId),
+
+    descricao:
+      descricao.trim() ||
+      null,
+
+    titulo_pagina_individual:
+      tituloPaginaIndividual.trim() ||
+      null,
+
+    descricao_pagina_individual:
+      descricaoPaginaIndividual.trim() ||
+      null,
+
+    linha_destaque_card:
+      linhaDestaqueCard.trim() ||
+      null,
+
+    voce_vai_aprender:
+      voceVaiAprender
+        .map(
+          (item) =>
+            item.trim()
         )
-        .insert({
-          titulo:
-            titulo.trim(),
+        .filter(Boolean),
 
-          slug,
+    publico_alvo:
+      publicoAlvo.trim() ||
+      null,
 
-          categoria_id:
-            Number(categoriaId),
+    porque_aprender:
+      porqueAprender.trim() ||
+      null,
 
-          descricao:
-            descricao.trim() ||
-            null,
+    seo_titulo:
+      seoTitulo.trim() ||
+      null,
 
-          publico_alvo:
-            publicoAlvo.trim() ||
-            null,
+    seo_descricao:
+      seoDescricao.trim() ||
+      null,
 
-          porque_aprender:
-            porqueAprender.trim() ||
-            null,
+    seo_palavra_chave:
+      seoPalavraChave.trim() ||
+      null,
 
-          imagem_url: null,
+    imagem_url: null,
 
-          video_introdutorio_url:
-            videoUrl.trim() ||
-            null,
+    video_introdutorio_url:
+      videoUrl.trim() ||
+      null,
 
-          status:
-            statusParaSalvar,
+    status:
+      statusParaSalvar,
 
-          destaque: false,
+    destaque: false,
 
-          ordem: 0,
-        })
-        .select("id")
-        .single();
+    ordem: 0,
+  })
+  .select("id")
+  .single();
 
       if (cursoError) {
         throw new Error(
@@ -1820,6 +1952,29 @@ setTimeout(() => {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="linha-destaque-card">
+                    Linha de destaque no card
+                  </Label>
+
+                  <Input
+                    id="linha-destaque-card"
+                    value={linhaDestaqueCard}
+                    onChange={(event) =>
+                      setLinhaDestaqueCard(
+                        event.target.value
+                      )
+                    }
+                    placeholder="Ex.: Compras, Inteligência Artificial, Contratos..."
+                    disabled={salvando}
+                  />
+
+                  <p className="text-xs text-zinc-500">
+                    Texto exibido em verde acima do título nos cards da Home.
+                    Se ficar vazio, será exibido “Treinamento”.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="descricao">
                     Descrição
                   </Label>
@@ -1872,6 +2027,91 @@ setTimeout(() => {
             </Card>
 
             {/* =============================================
+                PÁGINA INDIVIDUAL DO CURSO
+            ============================================= */}
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    <FileUser
+                      size={20}
+                    />
+                  </div>
+
+                  <div>
+                    <CardTitle>
+                      Página individual do curso
+                    </CardTitle>
+
+                    <CardDescription className="mt-1">
+                      Personalize o título e a descrição exibidos no topo da página interna do treinamento.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="titulo-pagina-individual">
+                    Título da página individual
+                  </Label>
+
+                  <Input
+                    id="titulo-pagina-individual"
+                    value={
+                      tituloPaginaIndividual
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setTituloPaginaIndividual(
+                        event.target.value
+                      )
+                    }
+                    placeholder="Ex.: Reforma Tributária aplicada a Compras e Suprimentos"
+                    disabled={
+                      salvando
+                    }
+                  />
+
+                  <p className="text-xs text-zinc-500">
+                    Este título será exibido como o título principal da página interna. Se ficar vazio, será utilizado o título do treinamento.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="descricao-pagina-individual">
+                    Descrição da página individual
+                  </Label>
+
+                  <Textarea
+                    id="descricao-pagina-individual"
+                    value={
+                      descricaoPaginaIndividual
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setDescricaoPaginaIndividual(
+                        event.target.value
+                      )
+                    }
+                    placeholder="Escreva o texto de apresentação que será exibido logo abaixo do título na página interna..."
+                    className="min-h-[130px] resize-y"
+                    disabled={
+                      salvando
+                    }
+                  />
+
+                  <p className="text-xs text-zinc-500">
+                    Se ficar vazio, será utilizada a descrição principal do treinamento.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* =============================================
                 POR QUE APRENDER
             ============================================= */}
 
@@ -1918,6 +2158,117 @@ setTimeout(() => {
                   className="min-h-[170px] resize-y"
                   disabled={salvando}
                 />
+              </CardContent>
+            </Card>
+
+            {/* =============================================
+                VOCÊ VAI APRENDER
+            ============================================= */}
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    <CircleCheck
+                      size={20}
+                    />
+                  </div>
+
+                  <div>
+                    <CardTitle>
+                      Você vai aprender
+                    </CardTitle>
+
+                    <CardDescription className="mt-1">
+                      Cadastre até 6 tópicos curtos que serão exibidos dentro do card do treinamento na Home.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {voceVaiAprender.map(
+                  (
+                    item,
+                    index
+                  ) => (
+                    <div
+                      key={`voce-vai-aprender-${index}`}
+                      className="flex items-center gap-3"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
+                        {index + 1}
+                      </div>
+
+                      <Input
+                        value={item}
+                        onChange={(event) =>
+                          atualizarItemVoceVaiAprender(
+                            index,
+                            event.target.value
+                          )
+                        }
+                        placeholder={
+                          index === 0
+                            ? "Ex.: Reforma Tributária aplicada a Compras"
+                            : "Ex.: IBS e CBS em Compras"
+                        }
+                        disabled={salvando}
+                        maxLength={90}
+                      />
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          removerItemVoceVaiAprender(
+                            index
+                          )
+                        }
+                        disabled={salvando}
+                        className="shrink-0 text-zinc-400 hover:bg-red-50 hover:text-red-600"
+                        title="Remover tópico"
+                      >
+                        <Trash2
+                          size={17}
+                        />
+                      </Button>
+                    </div>
+                  )
+                )}
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={
+                      adicionarItemVoceVaiAprender
+                    }
+                    disabled={
+                      salvando ||
+                      voceVaiAprender.length >=
+                        6
+                    }
+                    className="border-dashed"
+                  >
+                    <Plus
+                      size={16}
+                    />
+
+                    Adicionar tópico
+                  </Button>
+
+                  <p className="text-xs text-zinc-500">
+                    {
+                      voceVaiAprender.filter(
+                        (item) =>
+                          item.trim()
+                      ).length
+                    }
+                    /6 tópicos preenchidos
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
@@ -2935,7 +3286,190 @@ setTimeout(() => {
                 </div>
               </CardContent>
             </Card>
+
+{/* =============================================
+    SEO
+============================================= */}
+
+<Card>
+  <CardHeader>
+    <div className="flex items-start gap-3">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+        <Search size={20} />
+      </div>
+
+      <div>
+        <CardTitle>
+          SEO do treinamento
+        </CardTitle>
+
+        <CardDescription className="mt-1">
+          Configure como este treinamento poderá aparecer
+          nos resultados de busca do Google.
+        </CardDescription>
+      </div>
+    </div>
+  </CardHeader>
+
+  <CardContent className="space-y-6">
+    {/* TÍTULO SEO */}
+
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <Label htmlFor="seo-titulo">
+          Título SEO
+        </Label>
+
+        <span
+          className={`text-xs ${
+            seoTitulo.length > 60
+              ? "text-amber-600"
+              : "text-zinc-400"
+          }`}
+        >
+          {seoTitulo.length}/60
+        </span>
+      </div>
+
+      <Input
+        id="seo-titulo"
+        value={seoTitulo}
+        onChange={(event) =>
+          setSeoTitulo(
+            event.target.value
+          )
+        }
+        placeholder={
+          titulo ||
+          "Título que aparecerá no Google"
+        }
+        disabled={salvando}
+      />
+
+      <p className="text-xs text-zinc-500">
+        Recomendado: até aproximadamente 60 caracteres.
+        Se ficar vazio, utilizaremos o título do treinamento.
+      </p>
+    </div>
+
+    {/* META DESCRIPTION */}
+
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <Label htmlFor="seo-descricao">
+          Meta descrição
+        </Label>
+
+        <span
+          className={`text-xs ${
+            seoDescricao.length > 160
+              ? "text-amber-600"
+              : "text-zinc-400"
+          }`}
+        >
+          {seoDescricao.length}/160
+        </span>
+      </div>
+
+      <Textarea
+        id="seo-descricao"
+        value={seoDescricao}
+        onChange={(event) =>
+          setSeoDescricao(
+            event.target.value
+          )
+        }
+        placeholder="Escreva uma descrição objetiva e atrativa para os mecanismos de busca..."
+        className="min-h-[110px] resize-y"
+        disabled={salvando}
+      />
+
+      <p className="text-xs text-zinc-500">
+        Recomendado: aproximadamente 140 a 160 caracteres.
+      </p>
+    </div>
+
+    {/* PALAVRA-CHAVE */}
+
+    <div className="space-y-2">
+      <Label htmlFor="seo-palavra-chave">
+        Palavra-chave foco
+      </Label>
+
+      <Input
+        id="seo-palavra-chave"
+        value={seoPalavraChave}
+        onChange={(event) =>
+          setSeoPalavraChave(
+            event.target.value
+          )
+        }
+        placeholder="Ex.: curso strategic sourcing"
+        disabled={salvando}
+      />
+
+      <p className="text-xs text-zinc-500">
+        Campo interno para orientar a otimização do conteúdo.
+      </p>
+    </div>
+
+    <Separator />
+
+    {/* PREVIEW GOOGLE */}
+
+    <div className="space-y-3">
+      <div>
+        <p className="text-sm font-semibold text-zinc-900">
+          Prévia no Google
+        </p>
+
+        <p className="mt-1 text-xs text-zinc-500">
+          Esta é apenas uma simulação de como o resultado
+          poderá aparecer.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-zinc-200 bg-white p-5">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
+            AB
           </div>
+
+          <div>
+            <p className="text-xs font-medium text-zinc-800">
+              Academia Brasileira de Suprimentos
+            </p>
+
+            <p className="text-[11px] text-zinc-500">
+              absuprimentos.com.br › cursos ›{" "}
+              {slugify(titulo) ||
+                "nome-do-curso"}
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-3 text-xl font-medium text-[#1a0dab]">
+          {seoTitulo.trim() ||
+            titulo.trim() ||
+            "Título do treinamento"}
+        </p>
+
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-zinc-600">
+          {seoDescricao.trim() ||
+            descricao.trim() ||
+            "A descrição SEO do treinamento aparecerá aqui."}
+        </p>
+      </div>
+    </div>
+  </CardContent>
+</Card>
+
+
+
+          </div>
+
+
+
 
           {/* ===============================================
               COLUNA LATERAL

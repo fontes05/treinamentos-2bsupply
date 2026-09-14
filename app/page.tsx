@@ -35,6 +35,10 @@ type TreinamentoHome = {
   imagem_url: string | null;
   destaque: boolean;
   categoria_id: number | null;
+  nome_botao_curso: string | null;
+  linha_destaque_card: string | null;
+  voce_vai_aprender: string[] | null;
+  ordem_home: number;
 };
 
 type BannerHome = {
@@ -346,7 +350,11 @@ useEffect(() => {
             descricao,
             imagem_url,
             destaque,
-            categoria_id
+            categoria_id,
+            nome_botao_curso,
+            linha_destaque_card,
+            voce_vai_aprender,
+            ordem_home
           `,
         )
         .eq(
@@ -354,9 +362,9 @@ useEffect(() => {
           "publicado",
         )
         .order(
-          "destaque",
+          "ordem_home",
           {
-            ascending: false,
+            ascending: true,
           },
         )
         .order(
@@ -780,16 +788,25 @@ async function handleNewsletterSubmit(
           course,
           index,
         ) => {
-          /* =========================================
-             LOCALIZA A CATEGORIA DO CURSO
-          ========================================= */
-
-          const categoria =
-            categories.find(
-              (category) =>
-                category.id ===
-                course.categoria_id,
-            );
+          const itensAprendizado =
+            Array.isArray(
+              course.voce_vai_aprender,
+            )
+              ? course.voce_vai_aprender
+                  .filter(
+                    (
+                      item,
+                    ): item is string =>
+                      typeof item ===
+                        "string" &&
+                      item.trim().length >
+                        0,
+                  )
+                  .slice(
+                    0,
+                    6,
+                  )
+              : [];
 
           return (
             <Link
@@ -869,10 +886,10 @@ async function handleNewsletterSubmit(
 
               <div className="course-content">
 
-                {/* CATEGORIA REAL DO CURSO */}
+                {/* LINHA DE DESTAQUE DO CARD */}
 
                 <div className="course-category">
-                  {categoria?.nome ||
+                  {course.linha_destaque_card?.trim() ||
                     "Treinamento"}
                 </div>
 
@@ -889,27 +906,138 @@ async function handleNewsletterSubmit(
                     "Conheça este treinamento e desenvolva novas competências para sua carreira profissional."}
                 </p>
 
-                {/* INFORMAÇÕES */}
+                {/* VOCÊ VAI APRENDER */}
 
-                <div className="course-info">
-                  <span>
-                    Treinamento profissional
-                  </span>
+                {itensAprendizado.length >
+                  0 && (
+                  <div
+                    style={{
+                      marginTop:
+                        "18px",
+                      paddingTop:
+                        "16px",
+                      borderTop:
+                        "1px solid rgba(148, 163, 184, 0.18)",
+                    }}
+                  >
+                    <strong
+                      style={{
+                        display:
+                          "block",
+                        marginBottom:
+                          "10px",
+                        color:
+                          "#ffffff",
+                        fontSize:
+                          "14px",
+                        fontWeight:
+                          700,
+                        lineHeight:
+                          1.3,
+                      }}
+                    >
+                      Você vai aprender
+                    </strong>
 
-                  <span>
-                    •
-                  </span>
+                    <div
+                      style={{
+                        display:
+                          "grid",
+                        gap:
+                          "7px",
+                      }}
+                    >
+                      {itensAprendizado.map(
+                        (
+                          item,
+                          itemIndex,
+                        ) => (
+                          <div
+                            key={`${course.id}-aprendizado-${itemIndex}`}
+                            style={{
+                              display:
+                                "flex",
+                              alignItems:
+                                "flex-start",
+                              gap:
+                                "8px",
+                            }}
+                          >
+                            <span
+                              style={{
+                                display:
+                                  "inline-flex",
+                                alignItems:
+                                  "center",
+                                justifyContent:
+                                  "center",
+                                width:
+                                  "17px",
+                                height:
+                                  "17px",
+                                marginTop:
+                                  "1px",
+                                flex:
+                                  "0 0 17px",
+                                borderRadius:
+                                  "999px",
+                                background:
+                                  "#8be044",
+                                color:
+                                  "#082032",
+                              }}
+                              aria-hidden="true"
+                            >
+                              <svg
+                                viewBox="0 0 20 20"
+                                style={{
+                                  width:
+                                    "11px",
+                                  height:
+                                    "11px",
+                                  fill:
+                                    "none",
+                                  stroke:
+                                    "currentColor",
+                                  strokeWidth:
+                                    2.4,
+                                  strokeLinecap:
+                                    "round",
+                                  strokeLinejoin:
+                                    "round",
+                                }}
+                              >
+                                <path d="M5 10.5 8.2 13.5 15 6.8" />
+                              </svg>
+                            </span>
 
-                  <span>
-                    2BSUPPLY
-                  </span>
-                </div>
+                            <span
+                              style={{
+                                color:
+                                  "#b9c9dc",
+                                fontSize:
+                                  "12px",
+                                lineHeight:
+                                  1.4,
+                              }}
+                            >
+                              {item}
+                            </span>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                )}
+
+           
 
                 {/* RODAPÉ DO CARD */}
 
                 <div className="course-bottom">
                   <span>
-                    Conhecer treinamento
+                    {course.nome_botao_curso?.trim() ||
+                      "Conhecer treinamento"}
                   </span>
 
                   <ArrowRightIcon />

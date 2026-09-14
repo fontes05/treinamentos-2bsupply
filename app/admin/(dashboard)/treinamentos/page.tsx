@@ -15,6 +15,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Save,
   Search,
 } from "lucide-react";
 
@@ -67,6 +68,8 @@ type Treinamento = {
   imagem_url: string | null;
   status: StatusTreinamento;
   destaque: boolean;
+  ordem_home: number;
+  ordem_cursos: number;
   created_at: string;
   updated_at: string;
 };
@@ -146,6 +149,18 @@ export default function TreinamentosPage() {
   const [erro, setErro] =
     useState("");
 
+  const [
+    salvandoOrdemId,
+    setSalvandoOrdemId,
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    mensagemOrdem,
+    setMensagemOrdem,
+  ] = useState("");
+
   /* =======================================================
      CARREGAR TREINAMENTOS
   ======================================================= */
@@ -173,13 +188,21 @@ export default function TreinamentosPage() {
   imagem_url,
   status,
   destaque,
+  ordem_home,
+  ordem_cursos,
   created_at,
   updated_at
 `)
         .order(
-          "created_at",
+          "ordem_cursos",
           {
-            ascending: false,
+            ascending: true,
+          }
+        )
+        .order(
+          "titulo",
+          {
+            ascending: true,
           }
         );
 
@@ -211,6 +234,144 @@ export default function TreinamentosPage() {
   useEffect(() => {
     void carregarTreinamentos();
   }, []);
+
+  /* =======================================================
+     ORDEM DOS CURSOS
+  ======================================================= */
+
+  function atualizarOrdemLocal(
+    id: string,
+    campo:
+      | "ordem_home"
+      | "ordem_cursos",
+    valor: string
+  ) {
+    const numero =
+      Math.max(
+        1,
+        Number.parseInt(
+          valor || "1",
+          10
+        ) || 1
+      );
+
+    setTreinamentos(
+      (current) =>
+        current.map(
+          (item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  [campo]:
+                    numero,
+                }
+              : item
+        )
+    );
+
+    setMensagemOrdem("");
+  }
+
+  async function salvarOrdens(
+    treinamento: Treinamento
+  ) {
+    if (
+      salvandoOrdemId
+    ) {
+      return;
+    }
+
+    setSalvandoOrdemId(
+      treinamento.id
+    );
+
+    setMensagemOrdem("");
+    setErro("");
+
+    const supabase =
+      createClient();
+
+    try {
+      const {
+        data,
+        error,
+      } = await supabase
+        .from(
+          "treinamentos_cursos"
+        )
+        .update({
+          ordem_home:
+            Math.max(
+              1,
+              Number(
+                treinamento.ordem_home
+              ) || 1
+            ),
+
+          ordem_cursos:
+            Math.max(
+              1,
+              Number(
+                treinamento.ordem_cursos
+              ) || 1
+            ),
+        })
+        .eq(
+          "id",
+          treinamento.id
+        )
+        .select(`
+          id,
+          ordem_home,
+          ordem_cursos
+        `)
+        .single();
+
+      if (error) {
+        throw new Error(
+          error.message
+        );
+      }
+
+      setTreinamentos(
+        (current) =>
+          current.map(
+            (item) =>
+              item.id ===
+              treinamento.id
+                ? {
+                    ...item,
+
+                    ordem_home:
+                      data.ordem_home,
+
+                    ordem_cursos:
+                      data.ordem_cursos,
+                  }
+                : item
+          )
+      );
+
+      setMensagemOrdem(
+        `Ordem de "${treinamento.titulo}" atualizada.`
+      );
+    } catch (error) {
+      console.error(
+        "Erro ao salvar ordem do treinamento:",
+        error
+      );
+
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível atualizar a ordem do treinamento."
+      );
+    } finally {
+      setSalvandoOrdemId(
+        null
+      );
+    }
+  }
 
   /* =======================================================
      FILTROS
@@ -495,6 +656,12 @@ export default function TreinamentosPage() {
             </div>
           )}
 
+          {mensagemOrdem && (
+            <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium !text-emerald-700">
+              {mensagemOrdem}
+            </div>
+          )}
+
           {/* LOADING */}
 
           {loading ? (
@@ -557,6 +724,14 @@ export default function TreinamentosPage() {
 
                     <TableHead>
                       Destaque
+                    </TableHead>
+
+                    <TableHead className="w-[120px]">
+                      Ordem Home
+                    </TableHead>
+
+                    <TableHead className="w-[130px]">
+                      Ordem Cursos
                     </TableHead>
 
                     <TableHead>
@@ -646,6 +821,68 @@ export default function TreinamentosPage() {
                           )}
                         </TableCell>
 
+                        {/* ORDEM HOME */}
+
+                        <TableCell>
+                          <div className="space-y-1">
+                            <Input
+                              type="number"
+                              min={1}
+                              step={1}
+                              value={
+                                treinamento.ordem_home
+                              }
+                              onChange={(event) =>
+                                atualizarOrdemLocal(
+                                  treinamento.id,
+                                  "ordem_home",
+                                  event.target.value
+                                )
+                              }
+                              className="h-9 w-[82px]"
+                              disabled={
+                                salvandoOrdemId ===
+                                treinamento.id
+                              }
+                            />
+
+                            <span className="block text-[10px] !text-zinc-400">
+                              1 = primeiro
+                            </span>
+                          </div>
+                        </TableCell>
+
+                        {/* ORDEM CURSOS */}
+
+                        <TableCell>
+                          <div className="space-y-1">
+                            <Input
+                              type="number"
+                              min={1}
+                              step={1}
+                              value={
+                                treinamento.ordem_cursos
+                              }
+                              onChange={(event) =>
+                                atualizarOrdemLocal(
+                                  treinamento.id,
+                                  "ordem_cursos",
+                                  event.target.value
+                                )
+                              }
+                              className="h-9 w-[82px]"
+                              disabled={
+                                salvandoOrdemId ===
+                                treinamento.id
+                              }
+                            />
+
+                            <span className="block text-[10px] !text-zinc-400">
+                              1 = primeiro
+                            </span>
+                          </div>
+                        </TableCell>
+
                         {/* CRIADO */}
 
                         <TableCell className="whitespace-nowrap text-sm !text-zinc-500">
@@ -667,25 +904,59 @@ export default function TreinamentosPage() {
                         ================================= */}
 
                         <TableCell className="text-right">
-                          <Link
-                            href={`/admin/treinamentos/${treinamento.id}/editar`}
-                            className="
-                              inline-flex h-9 items-center justify-center
-                              gap-2 rounded-md border border-zinc-200
-                              bg-white px-3 text-sm font-medium
-                              !text-zinc-700 shadow-sm
-                              transition-all
-                              hover:border-emerald-200
-                              hover:bg-emerald-50
-                              hover:!text-emerald-700
-                            "
-                          >
-                            <Pencil
-                              size={15}
-                            />
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                void salvarOrdens(
+                                  treinamento
+                                )
+                              }
+                              disabled={
+                                Boolean(
+                                  salvandoOrdemId
+                                )
+                              }
+                              className="gap-2"
+                              title="Salvar ordem da Home e da página Cursos"
+                            >
+                              {salvandoOrdemId ===
+                              treinamento.id ? (
+                                <LoaderCircle
+                                  size={15}
+                                  className="animate-spin"
+                                />
+                              ) : (
+                                <Save
+                                  size={15}
+                                />
+                              )}
 
-                            Editar
-                          </Link>
+                              Ordem
+                            </Button>
+
+                            <Link
+                              href={`/admin/treinamentos/${treinamento.id}/editar`}
+                              className="
+                                inline-flex h-9 items-center justify-center
+                                gap-2 rounded-md border border-zinc-200
+                                bg-white px-3 text-sm font-medium
+                                !text-zinc-700 shadow-sm
+                                transition-all
+                                hover:border-emerald-200
+                                hover:bg-emerald-50
+                                hover:!text-emerald-700
+                              "
+                            >
+                              <Pencil
+                                size={15}
+                              />
+
+                              Editar
+                            </Link>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )

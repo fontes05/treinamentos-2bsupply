@@ -36,6 +36,11 @@ type Treinamento = {
   slug: string;
   descricao: string | null;
   imagem_url: string | null;
+  destaque: boolean;
+  nome_botao_curso: string | null;
+  linha_destaque_card: string | null;
+  voce_vai_aprender: string[] | null;
+  ordem_cursos: number;
 };
 
 /* =========================================================
@@ -85,11 +90,22 @@ export default function TodosTreinamentosPage() {
             titulo,
             slug,
             descricao,
-            imagem_url
+            imagem_url,
+            destaque,
+            nome_botao_curso,
+            linha_destaque_card,
+            voce_vai_aprender,
+            ordem_cursos
           `)
           .eq(
             "status",
             "publicado",
+          )
+          .order(
+            "ordem_cursos",
+            {
+              ascending: true,
+            },
           )
           .order(
             "titulo",
@@ -351,91 +367,242 @@ export default function TodosTreinamentosPage() {
             (
               curso,
               index,
-            ) => (
-              <Link
-                key={curso.id}
-                href={`/cursos/${curso.slug}`}
-                className="course-card"
-                onClick={(
-                  event,
-                ) =>
-                  handleCursoClick(
+            ) => {
+              const itensAprendizado =
+                Array.isArray(
+                  curso.voce_vai_aprender,
+                )
+                  ? curso.voce_vai_aprender
+                      .filter(
+                        (
+                          item,
+                        ): item is string =>
+                          typeof item ===
+                            "string" &&
+                          item.trim().length >
+                            0,
+                      )
+                      .slice(
+                        0,
+                        6,
+                      )
+                  : [];
+
+              return (
+                <Link
+                  key={curso.id}
+                  href={`/cursos/${curso.slug}`}
+                  className="course-card"
+                  onClick={(
                     event,
-                    curso,
-                  )
-                }
-              >
-
-                {/* CAPA */}
-
-                <div
-                  className={`course-cover course-cover-${
-                    (index % 5) + 1
-                  }`}
-                  style={
-                    curso.imagem_url
-                      ? {
-                          backgroundImage: `
-                            linear-gradient(
-                              180deg,
-                              rgba(10, 15, 25, 0.05) 0%,
-                              rgba(10, 15, 25, 0.45) 100%
-                            ),
-                            url("${curso.imagem_url}")
-                          `,
-                          backgroundSize:
-                            "cover",
-                          backgroundPosition:
-                            "center",
-                        }
-                      : undefined
+                  ) =>
+                    handleCursoClick(
+                      event,
+                      curso,
+                    )
                   }
                 >
 
-                  {!curso.imagem_url && (
-                    <div className="course-visual-icon">
-                      {getIniciais(
-                        curso.titulo,
-                      )}
+                  {/* CAPA */}
+
+                  <div
+                    className={`course-cover course-cover-${
+                      (index % 6) + 1
+                    }`}
+                    style={
+                      curso.imagem_url
+                        ? {
+                            backgroundImage: `
+                              linear-gradient(
+                                180deg,
+                                rgba(10, 15, 25, 0.05) 0%,
+                                rgba(10, 15, 25, 0.45) 100%
+                              ),
+                              url("${curso.imagem_url}")
+                            `,
+                            backgroundSize:
+                              "cover",
+                            backgroundPosition:
+                              "center",
+                          }
+                        : undefined
+                    }
+                  >
+
+                    {!curso.imagem_url && (
+                      <div className="course-visual-icon">
+                        {getIniciais(
+                          curso.titulo,
+                        )}
+                      </div>
+                    )}
+
+                    <div className="course-pattern" />
+
+                    {curso.destaque && (
+                      <span className="course-tag">
+                        DESTAQUE
+                      </span>
+                    )}
+                  </div>
+
+                  {/* CONTEÚDO */}
+
+                  <div className="course-content">
+
+                    <div className="course-category">
+                      {curso.linha_destaque_card?.trim() ||
+                        "Treinamento"}
                     </div>
-                  )}
 
-                  <div className="course-pattern" />
-                </div>
+                    <h3>
+                      {curso.titulo}
+                    </h3>
 
-                {/* CONTEÚDO */}
-
-                <div className="course-content">
-
-                  <div className="course-category">
-                    2BSUPPLY ACADEMY
-                  </div>
-
-                  <h3>
-                    {curso.titulo}
-                  </h3>
-
-                  {curso.descricao && (
                     <p>
-                      {curso.descricao}
+                      {curso.descricao ||
+                        "Conheça este treinamento e desenvolva novas competências para sua carreira profissional."}
                     </p>
-                  )}
 
-                  <div className="course-bottom">
+                    {itensAprendizado.length >
+                      0 && (
+                      <div
+                        style={{
+                          marginTop:
+                            "18px",
+                          paddingTop:
+                            "16px",
+                          borderTop:
+                            "1px solid rgba(148, 163, 184, 0.18)",
+                        }}
+                      >
+                        <strong
+                          style={{
+                            display:
+                              "block",
+                            marginBottom:
+                              "10px",
+                            color:
+                              "#ffffff",
+                            fontSize:
+                              "14px",
+                            fontWeight:
+                              700,
+                            lineHeight:
+                              1.3,
+                          }}
+                        >
+                          Você vai aprender
+                        </strong>
 
-                    <span>
-                      Conhecer treinamento
-                    </span>
+                        <div
+                          style={{
+                            display:
+                              "grid",
+                            gap:
+                              "7px",
+                          }}
+                        >
+                          {itensAprendizado.map(
+                            (
+                              item,
+                              itemIndex,
+                            ) => (
+                              <div
+                                key={`${curso.id}-aprendizado-${itemIndex}`}
+                                style={{
+                                  display:
+                                    "flex",
+                                  alignItems:
+                                    "flex-start",
+                                  gap:
+                                    "8px",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    display:
+                                      "inline-flex",
+                                    alignItems:
+                                      "center",
+                                    justifyContent:
+                                      "center",
+                                    width:
+                                      "17px",
+                                    height:
+                                      "17px",
+                                    marginTop:
+                                      "1px",
+                                    flex:
+                                      "0 0 17px",
+                                    borderRadius:
+                                      "999px",
+                                    background:
+                                      "#8be044",
+                                    color:
+                                      "#082032",
+                                  }}
+                                  aria-hidden="true"
+                                >
+                                  <svg
+                                    viewBox="0 0 20 20"
+                                    style={{
+                                      width:
+                                        "11px",
+                                      height:
+                                        "11px",
+                                      fill:
+                                        "none",
+                                      stroke:
+                                        "currentColor",
+                                      strokeWidth:
+                                        2.4,
+                                      strokeLinecap:
+                                        "round",
+                                      strokeLinejoin:
+                                        "round",
+                                    }}
+                                  >
+                                    <path d="M5 10.5 8.2 13.5 15 6.8" />
+                                  </svg>
+                                </span>
 
-                    <ArrowRight
-                      size={18}
-                    />
+                                <span
+                                  style={{
+                                    color:
+                                      "#b9c9dc",
+                                    fontSize:
+                                      "12px",
+                                    lineHeight:
+                                      1.4,
+                                  }}
+                                >
+                                  {item}
+                                </span>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="course-bottom">
+
+                      <span>
+                        {curso.nome_botao_curso?.trim() ||
+                          "Conhecer treinamento"}
+                      </span>
+
+                      <ArrowRight
+                        size={18}
+                      />
+
+                    </div>
 
                   </div>
-
-                </div>
-              </Link>
-            ),
+                </Link>
+              );
+            },
           )}
 
         </div>

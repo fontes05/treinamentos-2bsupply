@@ -1,0 +1,2395 @@
+"use client";
+
+import {
+  type MouseEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+import Link from "next/link";
+
+import {
+  useParams,
+  useRouter,
+} from "next/navigation";
+
+import {
+  ArrowLeft,
+  Award,
+  BookOpen,
+  Brain,
+  BriefcaseBusiness,
+  ChartNoAxesCombined,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Clock3,
+  ExternalLink,
+  FileUser,
+  GraduationCap,
+  LoaderCircle,
+  Play,
+  Sparkles,
+  Target,
+  TrendingUp,
+  UserRound,
+  Video,
+} from "lucide-react";
+
+import {
+  createClient,
+} from "@/lib/supabase/client";
+
+import {
+  registrarEventoTreinamento,
+} from "@/lib/training-analytics";
+
+import SiteHeader from "@/components/site/SiteHeader";
+import SiteFooter from "@/components/site/SiteFooter";
+
+/* =========================================================
+   TIPOS
+========================================================= */
+
+type Curso = {
+  id: string;
+  titulo: string;
+  slug: string;
+
+  categoria_id:
+    | number
+    | null;
+
+  descricao:
+    | string
+    | null;
+
+  titulo_pagina_individual:
+    | string
+    | null;
+
+  descricao_pagina_individual:
+    | string
+    | null;
+
+  publico_alvo:
+    | string
+    | null;
+
+  porque_aprender:
+    | string
+    | null;
+
+  imagem_url:
+    | string
+    | null;
+
+  video_introdutorio_url:
+    | string
+    | null;
+
+  preco_de:
+    | number
+    | null;
+
+  preco_para:
+    | number
+    | null;
+
+  parcelamento:
+    | string
+    | null;
+
+  link_inscricao:
+    | string
+    | null;
+};
+
+type Categoria = {
+  id: number;
+  nome: string;
+  slug: string;
+};
+
+type Modulo = {
+  id: string;
+  titulo: string;
+  descricao:
+    | string
+    | null;
+  ordem: number;
+};
+
+type Beneficio = {
+  id: string;
+  titulo: string;
+  icone:
+    | string
+    | null;
+  ordem: number;
+};
+
+type Certificado = {
+  id: string;
+  titulo: string;
+
+  descricao:
+    | string
+    | null;
+
+  imagem_url:
+    | string
+    | null;
+
+  ordem: number;
+};
+
+type Professor = {
+  id: string;
+  nome: string;
+
+  descricao:
+    | string
+    | null;
+
+  cargo:
+    | string
+    | null;
+
+  foto_url:
+    | string
+    | null;
+};
+
+type CursoProfessor = {
+  professor_id: string;
+};
+
+type AulaExtra = {
+  id: string;
+  titulo: string;
+
+  descricao:
+    | string
+    | null;
+
+  ordem: number;
+
+  grupo_titulo:
+    | string
+    | null;
+
+  grupo_ordem: number;
+};
+
+type GrupoAulaExtra = {
+  titulo: string;
+  ordem: number;
+  aulas: AulaExtra[];
+};
+
+/* =========================================================
+   ÍCONES DOS BENEFÍCIOS
+========================================================= */
+
+const benefitIcons = {
+  BriefcaseBusiness,
+  TrendingUp,
+  FileUser,
+  Award,
+  Target,
+  Brain,
+  ChartNoAxesCombined,
+  Sparkles,
+};
+
+type BenefitIconName =
+  keyof typeof benefitIcons;
+
+/* =========================================================
+   VIDEO
+========================================================= */
+
+function getEmbedUrl(
+  url: string | null,
+) {
+  if (!url) {
+    return null;
+  }
+
+  try {
+    const parsed =
+      new URL(url);
+
+    /*
+     * YouTube
+     */
+    if (
+      parsed.hostname.includes(
+        "youtube.com",
+      )
+    ) {
+      /*
+       * URL já em embed
+       */
+      if (
+        parsed.pathname.startsWith(
+          "/embed/",
+        )
+      ) {
+        return url;
+      }
+
+      /*
+       * youtube.com/watch?v=...
+       */
+      const videoId =
+        parsed.searchParams.get(
+          "v",
+        );
+
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}`;
+      }
+
+      /*
+       * YouTube Shorts
+       */
+      if (
+        parsed.pathname.startsWith(
+          "/shorts/",
+        )
+      ) {
+        const id =
+          parsed.pathname
+            .split("/")
+            .filter(Boolean)[1];
+
+        if (id) {
+          return `https://www.youtube.com/embed/${id}`;
+        }
+      }
+    }
+
+    /*
+     * youtu.be
+     */
+    if (
+      parsed.hostname.includes(
+        "youtu.be",
+      )
+    ) {
+      const videoId =
+        parsed.pathname
+          .replace("/", "")
+          .trim();
+
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}`;
+      }
+    }
+
+    /*
+     * Vimeo
+     */
+    if (
+      parsed.hostname.includes(
+        "vimeo.com",
+      )
+    ) {
+      const id =
+        parsed.pathname
+          .split("/")
+          .filter(Boolean)
+          .pop();
+
+      if (id) {
+        return `https://player.vimeo.com/video/${id}`;
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/* =========================================================
+   FORMATAR PREÇO
+========================================================= */
+
+function formatarPreco(
+  valor: number | null,
+) {
+  if (valor == null) {
+    return "";
+  }
+
+  return new Intl.NumberFormat(
+    "pt-BR",
+    {
+      style: "currency",
+      currency: "BRL",
+    },
+  ).format(valor);
+}
+
+/* =========================================================
+   PAGE
+========================================================= */
+
+export default function TreinamentoPage() {
+  const params =
+    useParams();
+
+  const router =
+    useRouter();
+
+  const slug =
+    params.slug as string;
+
+  /* =======================================================
+     ESTADOS
+  ======================================================= */
+
+  const [
+    curso,
+    setCurso,
+  ] =
+    useState<Curso | null>(
+      null,
+    );
+
+  const [
+    categoria,
+    setCategoria,
+  ] =
+    useState<Categoria | null>(
+      null,
+    );
+
+  const [
+    modulos,
+    setModulos,
+  ] =
+    useState<Modulo[]>([]);
+
+  const [
+    gruposAulasExtras,
+    setGruposAulasExtras,
+  ] =
+    useState<
+      GrupoAulaExtra[]
+    >([]);
+
+  const [
+    beneficios,
+    setBeneficios,
+  ] =
+    useState<
+      Beneficio[]
+    >([]);
+
+  const [
+    certificados,
+    setCertificados,
+  ] =
+    useState<
+      Certificado[]
+    >([]);
+
+  const [
+    professor,
+    setProfessor,
+  ] =
+    useState<Professor | null>(
+      null,
+    );
+
+  const [
+    carregando,
+    setCarregando,
+  ] =
+    useState(true);
+
+  const [
+    erro,
+    setErro,
+  ] =
+    useState("");
+
+  const [
+    moduloAberto,
+    setModuloAberto,
+  ] =
+    useState<
+      string | null
+    >(null);
+
+  const [
+    aulasExtrasAberto,
+    setAulasExtrasAberto,
+  ] =
+    useState(false);
+
+  const [
+    grupoAulaExtraAberto,
+    setGrupoAulaExtraAberto,
+  ] =
+    useState<
+      number | null
+    >(null);
+
+  const [
+    videoModalOpen,
+    setVideoModalOpen,
+  ] =
+    useState(false);
+
+  /* =======================================================
+     HERO / CARD STICKY
+  ======================================================= */
+
+  const heroRef =
+    useRef<HTMLElement | null>(
+      null,
+    );
+
+  const [
+    heroVisivel,
+    setHeroVisivel,
+  ] =
+    useState(true);
+
+  useEffect(() => {
+    if (
+      carregando ||
+      !curso
+    ) {
+      return;
+    }
+
+    const hero =
+      heroRef.current;
+
+    if (!hero) {
+      return;
+    }
+
+    const observer =
+      new IntersectionObserver(
+        ([entry]) => {
+          setHeroVisivel(
+            entry.isIntersecting,
+          );
+        },
+        {
+          threshold: 0,
+        },
+      );
+
+    observer.observe(
+      hero,
+    );
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [
+    carregando,
+    curso,
+  ]);
+
+  /* =======================================================
+     CARREGAR TREINAMENTO
+  ======================================================= */
+
+  useEffect(() => {
+    if (!slug) {
+      return;
+    }
+
+    async function carregar() {
+      setCarregando(true);
+
+      setErro("");
+
+      const supabase =
+        createClient();
+
+      try {
+        /* ===============================================
+           CURSO
+        =============================================== */
+
+        const {
+          data:
+            cursoData,
+          error:
+            cursoError,
+        } =
+          await supabase
+            .from(
+              "treinamentos_cursos",
+            )
+            .select(`
+              id,
+              titulo,
+              slug,
+              categoria_id,
+              descricao,
+              titulo_pagina_individual,
+              descricao_pagina_individual,
+              publico_alvo,
+              porque_aprender,
+              imagem_url,
+              video_introdutorio_url,
+              preco_de,
+              preco_para,
+              parcelamento,
+              link_inscricao
+            `)
+            .eq(
+              "slug",
+              slug,
+            )
+            .eq(
+              "status",
+              "publicado",
+            )
+            .maybeSingle();
+
+        if (
+          cursoError
+        ) {
+          throw new Error(
+            cursoError.message,
+          );
+        }
+
+        if (
+          !cursoData
+        ) {
+          setErro(
+            "Treinamento não encontrado.",
+          );
+
+          return;
+        }
+
+        setCurso(
+          cursoData as Curso,
+        );
+
+        const cursoId =
+          cursoData.id;
+
+        /* ===============================================
+           CATEGORIA
+        =============================================== */
+
+        if (
+          cursoData.categoria_id
+        ) {
+          const {
+            data:
+              categoriaData,
+            error:
+              categoriaError,
+          } =
+            await supabase
+              .from(
+                "treinamentos_categorias",
+              )
+              .select(`
+                id,
+                nome,
+                slug
+              `)
+              .eq(
+                "id",
+                cursoData.categoria_id,
+              )
+              .eq(
+                "ativo",
+                true,
+              )
+              .maybeSingle();
+
+          if (
+            categoriaError
+          ) {
+            throw new Error(
+              categoriaError.message,
+            );
+          }
+
+          setCategoria(
+            categoriaData as
+              | Categoria
+              | null,
+          );
+        } else {
+          setCategoria(
+            null,
+          );
+        }
+
+        /* ===============================================
+           MÓDULOS
+        =============================================== */
+
+        const {
+          data:
+            modulosData,
+          error:
+            modulosError,
+        } =
+          await supabase
+            .from(
+              "treinamentos_modulos",
+            )
+            .select(`
+              id,
+              titulo,
+              descricao,
+              ordem
+            `)
+            .eq(
+              "curso_id",
+              cursoId,
+            )
+            .eq(
+              "ativo",
+              true,
+            )
+            .order(
+              "ordem",
+              {
+                ascending:
+                  true,
+              },
+            );
+
+        if (
+          modulosError
+        ) {
+          throw new Error(
+            modulosError.message,
+          );
+        }
+
+        setModulos(
+          (modulosData ??
+            []) as Modulo[],
+        );
+
+        if (
+          modulosData &&
+          modulosData.length >
+            0
+        ) {
+          setModuloAberto(
+            modulosData[0]
+              .id,
+          );
+        }
+
+        /* ===============================================
+           AULAS EXTRAS
+        =============================================== */
+
+        const {
+          data:
+            aulasExtrasData,
+          error:
+            aulasExtrasError,
+        } =
+          await supabase
+            .from(
+              "treinamentos_aulas_extras",
+            )
+            .select(`
+              id,
+              titulo,
+              descricao,
+              ordem,
+              grupo_titulo,
+              grupo_ordem
+            `)
+            .eq(
+              "curso_id",
+              cursoId,
+            )
+            .eq(
+              "ativo",
+              true,
+            )
+            .order(
+              "grupo_ordem",
+              {
+                ascending:
+                  true,
+              },
+            )
+            .order(
+              "ordem",
+              {
+                ascending:
+                  true,
+              },
+            );
+
+        if (
+          aulasExtrasError
+        ) {
+          throw new Error(
+            aulasExtrasError.message,
+          );
+        }
+
+        const aulasExtras =
+          (
+            aulasExtrasData ??
+            []
+          ) as AulaExtra[];
+
+        const gruposMap =
+          new Map<
+            number,
+            GrupoAulaExtra
+          >();
+
+        aulasExtras.forEach(
+          (aula) => {
+            const grupoOrdem =
+              Number(
+                aula.grupo_ordem ??
+                  1,
+              );
+
+            const grupoTitulo =
+              aula.grupo_titulo?.trim() ||
+              "Aulas Extras";
+
+            if (
+              !gruposMap.has(
+                grupoOrdem,
+              )
+            ) {
+              gruposMap.set(
+                grupoOrdem,
+                {
+                  titulo:
+                    grupoTitulo,
+
+                  ordem:
+                    grupoOrdem,
+
+                  aulas: [],
+                },
+              );
+            }
+
+            gruposMap
+              .get(
+                grupoOrdem,
+              )
+              ?.aulas.push(
+                aula,
+              );
+          },
+        );
+
+        setGruposAulasExtras(
+          Array.from(
+            gruposMap.values(),
+          ).sort(
+            (
+              a,
+              b,
+            ) =>
+              a.ordem -
+              b.ordem,
+          ),
+        );
+
+        /* ===============================================
+           BENEFÍCIOS
+        =============================================== */
+
+        const {
+          data:
+            beneficiosData,
+          error:
+            beneficiosError,
+        } =
+          await supabase
+            .from(
+              "treinamentos_beneficios",
+            )
+            .select(`
+              id,
+              titulo,
+              icone,
+              ordem
+            `)
+            .eq(
+              "curso_id",
+              cursoId,
+            )
+            .eq(
+              "ativo",
+              true,
+            )
+            .order(
+              "ordem",
+              {
+                ascending:
+                  true,
+              },
+            );
+
+        if (
+          beneficiosError
+        ) {
+          throw new Error(
+            beneficiosError.message,
+          );
+        }
+
+        setBeneficios(
+          (beneficiosData ??
+            []) as Beneficio[],
+        );
+
+        /* ===============================================
+           CERTIFICADOS
+        =============================================== */
+
+        const {
+          data:
+            certificadosData,
+          error:
+            certificadosError,
+        } =
+          await supabase
+            .from(
+              "treinamentos_certificados",
+            )
+            .select(`
+              id,
+              titulo,
+              descricao,
+              imagem_url,
+              ordem
+            `)
+            .eq(
+              "curso_id",
+              cursoId,
+            )
+            .eq(
+              "ativo",
+              true,
+            )
+            .order(
+              "ordem",
+              {
+                ascending:
+                  true,
+              },
+            );
+
+        if (
+          certificadosError
+        ) {
+          throw new Error(
+            certificadosError.message,
+          );
+        }
+
+        setCertificados(
+          (certificadosData ??
+            []) as Certificado[],
+        );
+
+        /* ===============================================
+           PROFESSOR
+        =============================================== */
+
+        const {
+          data:
+            relacao,
+          error:
+            relacaoError,
+        } =
+          await supabase
+            .from(
+              "treinamentos_curso_professores",
+            )
+            .select(
+              "professor_id",
+            )
+            .eq(
+              "curso_id",
+              cursoId,
+            )
+            .order(
+              "ordem",
+              {
+                ascending:
+                  true,
+              },
+            )
+            .limit(1)
+            .maybeSingle();
+
+        if (
+          relacaoError
+        ) {
+          throw new Error(
+            relacaoError.message,
+          );
+        }
+
+        const relacionamento =
+          relacao as
+            | CursoProfessor
+            | null;
+
+        if (
+          relacionamento
+            ?.professor_id
+        ) {
+          const {
+            data:
+              professorData,
+            error:
+              professorError,
+          } =
+            await supabase
+              .from(
+                "treinamentos_professores",
+              )
+              .select(`
+                id,
+                nome,
+                descricao,
+                cargo,
+                foto_url
+              `)
+              .eq(
+                "id",
+                relacionamento.professor_id,
+              )
+              .maybeSingle();
+
+          if (
+            professorError
+          ) {
+            throw new Error(
+              professorError.message,
+            );
+          }
+
+          setProfessor(
+            professorData as
+              | Professor
+              | null,
+          );
+        } else {
+          setProfessor(
+            null,
+          );
+        }
+      } catch (
+        error
+      ) {
+        console.error(
+          "Erro carregando treinamento:",
+          error,
+        );
+
+        setErro(
+          error instanceof
+            Error
+            ? error.message
+            : "Não foi possível carregar o treinamento.",
+        );
+      } finally {
+        setCarregando(
+          false,
+        );
+      }
+    }
+
+    void carregar();
+  }, [
+    slug,
+  ]);
+
+  /* =======================================================
+     ANALYTICS - PRÉVIA
+  ======================================================= */
+
+  function abrirPreviaCurso() {
+    if (!curso) {
+      return;
+    }
+
+    void registrarEventoTreinamento(
+      {
+        slug:
+          curso.slug,
+
+        titulo:
+          curso.titulo,
+
+        evento:
+          "previa_click",
+
+        origem:
+          `/${curso.slug}`,
+      },
+    );
+
+    setVideoModalOpen(
+      true,
+    );
+  }
+
+  /* =======================================================
+     ANALYTICS - INSCRIÇÃO
+  ======================================================= */
+
+  async function handleInscricaoClick(
+    event: MouseEvent<HTMLAnchorElement>,
+  ) {
+    if (!curso) {
+      return;
+    }
+
+    if (
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      void registrarEventoTreinamento(
+        {
+          slug:
+            curso.slug,
+
+          titulo:
+            curso.titulo,
+
+          evento:
+            "inscricao_click",
+
+          origem:
+            `/${curso.slug}`,
+        },
+      );
+
+      return;
+    }
+
+    const destino =
+      event.currentTarget.href;
+
+    event.preventDefault();
+
+    await registrarEventoTreinamento(
+      {
+        slug:
+          curso.slug,
+
+        titulo:
+          curso.titulo,
+
+        evento:
+          "inscricao_click",
+
+        origem:
+          `/${curso.slug}`,
+      },
+    );
+
+    window.location.href =
+      destino;
+  }
+
+  /* =======================================================
+     LOADING
+  ======================================================= */
+
+if (carregando) {
+  return (
+    <>
+      <SiteHeader />
+
+      <main className="training-page-loading">
+        <LoaderCircle
+          size={32}
+          className="training-spin"
+        />
+
+        <p>
+          Carregando treinamento...
+        </p>
+      </main>
+
+      <SiteFooter />
+    </>
+  );
+}
+
+  /* =======================================================
+     ERRO
+  ======================================================= */
+
+  if (
+  erro ||
+  !curso
+) {
+  return (
+    <>
+      <SiteHeader />
+
+      <main className="training-not-found">
+        <BookOpen
+          size={36}
+        />
+
+        <h1>
+          Treinamento não encontrado
+        </h1>
+
+        <p>
+          O treinamento informado não está
+          disponível ou ainda não foi publicado.
+        </p>
+
+        <button
+          type="button"
+          onClick={() =>
+            router.push("/")
+          }
+        >
+          <ArrowLeft
+            size={17}
+          />
+
+          Voltar para o início
+        </button>
+      </main>
+
+      <SiteFooter />
+    </>
+  );
+}
+
+  /* =======================================================
+     VÍDEO
+  ======================================================= */
+
+  const embedUrl =
+    getEmbedUrl(
+      curso.video_introdutorio_url,
+    );
+
+  /* =======================================================
+     PÁGINA
+  ======================================================= */
+
+return (
+  <>
+    <SiteHeader />
+
+    <main className="training-detail-page">
+
+      {/* =================================================
+          HERO
+      ================================================= */}
+
+      <section
+        ref={
+          heroRef
+        }
+        className="training-detail-hero"
+      >
+        <div className="container">
+
+          <div className="training-detail-heading">
+
+            <div className="training-breadcrumb">
+
+              <Link href="/">
+                Início
+              </Link>
+
+              <ChevronRight
+                size={14}
+              />
+
+              <Link href="/cursos">
+                Treinamentos
+              </Link>
+
+              <ChevronRight
+                size={14}
+              />
+
+              <span>
+                {
+                  curso.titulo
+                }
+              </span>
+
+            </div>
+
+            {/* =============================================
+                CATEGORIA DO TREINAMENTO
+            ============================================= */}
+
+            {categoria ? (
+              <Link
+                href={`/cursos?categoria=${categoria.slug}`}
+                className="section-kicker"
+              >
+                {
+                  categoria.nome
+                }
+              </Link>
+            ) : (
+              <span className="section-kicker">
+                2BSUPPLY ACADEMY
+              </span>
+            )}
+
+            <h1>
+              {
+                curso.titulo_pagina_individual?.trim() ||
+                curso.titulo
+              }
+            </h1>
+
+            {(curso.descricao_pagina_individual?.trim() ||
+              curso.descricao) && (
+              <p className="training-detail-intro">
+                {
+                  curso.descricao_pagina_individual?.trim() ||
+                  curso.descricao
+                }
+              </p>
+            )}
+
+            <div className="training-detail-meta">
+
+              <span>
+                <GraduationCap
+                  size={18}
+                />
+
+                Treinamento
+                profissional
+              </span>
+
+              <span>
+                <Clock3
+                  size={18}
+                />
+
+                Acesso online vitalício
+              </span>
+
+              {professor && (
+                <span>
+                  <UserRound
+                    size={18}
+                  />
+
+                  {
+                    professor.nome
+                  }
+                </span>
+              )}
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =================================================
+          CONTEÚDO
+      ================================================= */}
+
+      <div className="container training-detail-layout">
+
+        {/* ===============================================
+            CONTEÚDO PRINCIPAL
+        =============================================== */}
+
+        <div className="training-detail-main">
+
+          {/* =============================================
+              BENEFÍCIOS
+          ============================================= */}
+
+          {beneficios.length >
+            0 && (
+            <section className="training-content-box">
+
+              <div className="training-section-heading">
+
+                <span>
+                  O que você vai
+                  desenvolver
+                </span>
+
+                <h2>
+                  Benefícios do
+                  treinamento
+                </h2>
+
+              </div>
+
+              <div className="training-benefits-grid">
+
+                {beneficios.map(
+                  (
+                    beneficio,
+                  ) => {
+                    const Icon =
+                      benefitIcons[
+                        beneficio.icone as BenefitIconName
+                      ] ||
+                      Check;
+
+                    return (
+                      <div
+                        key={
+                          beneficio.id
+                        }
+                        className="training-benefit"
+                      >
+                        <div className="training-benefit-icon">
+
+                          <Icon
+                            size={
+                              22
+                            }
+                          />
+
+                        </div>
+
+                        <span>
+                          {
+                            beneficio.titulo
+                          }
+                        </span>
+                      </div>
+                    );
+                  },
+                )}
+
+              </div>
+            </section>
+          )}
+
+          {/* =============================================
+              POR QUE APRENDER
+          ============================================= */}
+
+          {curso.porque_aprender && (
+            <section className="training-section">
+
+              <div className="training-section-heading">
+
+                <span>
+                  DESENVOLVIMENTO
+                </span>
+
+                <h2>
+                  Por que aprender
+                  sobre este tema?
+                </h2>
+
+              </div>
+
+              <p className="training-section-text">
+                {
+                  curso.porque_aprender
+                }
+              </p>
+
+            </section>
+          )}
+
+          {/* =============================================
+              PÚBLICO ALVO
+          ============================================= */}
+
+          {curso.publico_alvo && (
+            <section className="training-section">
+
+              <div className="training-section-heading">
+
+                <span>
+                  PARA QUEM É
+                </span>
+
+                <h2>
+                  Público-alvo
+                </h2>
+
+              </div>
+
+              <div className="training-audience">
+
+                <Target
+                  size={23}
+                />
+
+                <p>
+                  {
+                    curso.publico_alvo
+                  }
+                </p>
+
+              </div>
+            </section>
+          )}
+
+          {/* =============================================
+              CONTEÚDO DO CURSO
+          ============================================= */}
+
+          {modulos.length >
+            0 && (
+            <section className="training-section">
+
+              <div className="training-section-heading training-section-heading-row">
+
+                <div>
+
+                  <span>
+                    CONTEÚDO
+                  </span>
+
+                  <h2>
+                    Conteúdo do
+                    treinamento
+                  </h2>
+
+                </div>
+
+                <small>
+                  {
+                    modulos.length
+                  }{" "}
+                  módulo
+                  {modulos.length ===
+                  1
+                    ? ""
+                    : "s"}
+                </small>
+
+              </div>
+
+              <div className="training-modules">
+
+                {modulos.map(
+                  (
+                    modulo,
+                    index,
+                  ) => {
+                    const aberto =
+                      moduloAberto ===
+                      modulo.id;
+
+                    return (
+                      <article
+                        className={`training-module ${
+                          aberto
+                            ? "training-module-open"
+                            : ""
+                        }`}
+                        key={
+                          modulo.id
+                        }
+                      >
+                        <button
+                          type="button"
+                          className="training-module-header"
+                          onClick={() =>
+                            setModuloAberto(
+                              aberto
+                                ? null
+                                : modulo.id,
+                            )
+                          }
+                        >
+                          <div>
+
+                            <span className="training-module-number">
+                              {String(
+                                index +
+                                  1,
+                              ).padStart(
+                                2,
+                                "0",
+                              )}
+                            </span>
+
+                            <strong>
+                              {
+                                modulo.titulo
+                              }
+                            </strong>
+
+                          </div>
+
+                          <ChevronDown
+                            size={
+                              20
+                            }
+                          />
+
+                        </button>
+
+                        {aberto &&
+                          modulo.descricao && (
+                            <div
+                              className="training-module-content"
+                              dangerouslySetInnerHTML={{
+                                __html:
+                                  modulo.descricao,
+                              }}
+                            />
+                          )}
+
+                      </article>
+                    );
+                  },
+                )}
+
+              </div>
+            </section>
+          )}
+
+          {/* =============================================
+              AULAS EXTRAS
+          ============================================= */}
+
+          {gruposAulasExtras.length >
+            0 && (
+            <section className="training-section">
+
+              {/* ===========================================
+                  CABEÇALHO PRINCIPAL - RECOLHIDO
+              =========================================== */}
+
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#08111d]">
+
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left transition hover:bg-white/[0.025]"
+                  onClick={() => {
+                    setAulasExtrasAberto(
+                      (current) =>
+                        !current,
+                    );
+
+                    if (
+                      aulasExtrasAberto
+                    ) {
+                      setGrupoAulaExtraAberto(
+                        null,
+                      );
+                    }
+                  }}
+                  aria-expanded={
+                    aulasExtrasAberto
+                  }
+                >
+                  <div>
+
+                    <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#59e199]">
+                      Conteúdo adicional
+                    </span>
+
+                    <h2 className="mt-1 text-xl font-bold text-white">
+                      Aulas Extras
+                    </h2>
+
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-3">
+
+                    <span className="hidden text-xs font-medium text-white/50 sm:block">
+                      {
+                        gruposAulasExtras.reduce(
+                          (
+                            total,
+                            grupo,
+                          ) =>
+                            total +
+                            grupo.aulas.length,
+                          0,
+                        )
+                      }{" "}
+                      conteúdo
+                      {gruposAulasExtras.reduce(
+                        (
+                          total,
+                          grupo,
+                        ) =>
+                          total +
+                          grupo.aulas.length,
+                        0,
+                      ) === 1
+                        ? ""
+                        : "s"}
+                    </span>
+
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-[#59e199]">
+                      <ChevronDown
+                        size={19}
+                        className={`transition-transform duration-200 ${
+                          aulasExtrasAberto
+                            ? "rotate-180"
+                            : ""
+                        }`}
+                      />
+                    </div>
+
+                  </div>
+
+                </button>
+
+                {/* =========================================
+                    GRUPOS DE CONTEÚDO
+                ========================================= */}
+
+                {aulasExtrasAberto && (
+                  <div className="space-y-3 border-t border-white/10 p-4 sm:p-5">
+
+                    {gruposAulasExtras.map(
+                      (
+                        grupo,
+                      ) => {
+                        const grupoAberto =
+                          grupoAulaExtraAberto ===
+                          grupo.ordem;
+
+                        return (
+                          <div
+                            key={`${grupo.ordem}-${grupo.titulo}`}
+                            className="overflow-hidden rounded-xl border border-white/10 bg-[#0c1724]"
+                          >
+
+                            {/* =================================
+                                TÍTULO DO GRUPO - RECOLHIDO
+                            ================================= */}
+
+                            <button
+                              type="button"
+                              className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-white/[0.025]"
+                              onClick={() =>
+                                setGrupoAulaExtraAberto(
+                                  grupoAberto
+                                    ? null
+                                    : grupo.ordem,
+                                )
+                              }
+                              aria-expanded={
+                                grupoAberto
+                              }
+                            >
+                              <div className="min-w-0">
+
+                                <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#59e199]">
+                                  Conteúdo complementar
+                                </span>
+
+                                <h3 className="mt-1 text-base font-bold text-white">
+                                  {
+                                    grupo.titulo
+                                  }
+                                </h3>
+
+                              </div>
+
+                              <div className="flex shrink-0 items-center gap-3">
+
+                                <span className="hidden text-xs font-medium text-white/50 sm:block">
+                                  {
+                                    grupo.aulas.length
+                                  }{" "}
+                                  conteúdo
+                                  {grupo.aulas.length ===
+                                  1
+                                    ? ""
+                                    : "s"}
+                                </span>
+
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-[#59e199]">
+                                  <ChevronDown
+                                    size={17}
+                                    className={`transition-transform duration-200 ${
+                                      grupoAberto
+                                        ? "rotate-180"
+                                        : ""
+                                    }`}
+                                  />
+                                </div>
+
+                              </div>
+
+                            </button>
+
+                            {/* =================================
+                                CONTEÚDO DO GRUPO
+                            ================================= */}
+
+                            {grupoAberto && (
+                              <div className="border-t border-white/10">
+
+                                {/* TABELA DESKTOP */}
+
+                                <div className="hidden md:block">
+
+                                  <div className="grid grid-cols-[minmax(240px,0.85fr)_minmax(0,1.15fr)] border-b border-white/10 bg-white/[0.035]">
+
+                                    <div className="px-5 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-white/60">
+                                      Conteúdo
+                                    </div>
+
+                                    <div className="border-l border-white/10 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-white/60">
+                                      O que o aluno encontrará
+                                    </div>
+
+                                  </div>
+
+                                  {grupo.aulas.map(
+                                    (
+                                      aula,
+                                      index,
+                                    ) => (
+                                      <article
+                                        key={
+                                          aula.id
+                                        }
+                                        className="grid grid-cols-[minmax(240px,0.85fr)_minmax(0,1.15fr)] border-b border-white/10 last:border-b-0"
+                                      >
+
+                                        <div className="flex gap-3 px-5 py-4">
+
+                                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#59e199]/10 text-xs font-bold text-[#59e199]">
+                                            {String(
+                                              index +
+                                                1,
+                                            ).padStart(
+                                              2,
+                                              "0",
+                                            )}
+                                          </div>
+
+                                          <h4 className="pt-1 text-sm font-semibold leading-5 text-white">
+                                            {
+                                              aula.titulo
+                                            }
+                                          </h4>
+
+                                        </div>
+
+                                        <div className="border-l border-white/10 px-5 py-4">
+
+                                          {aula.descricao ? (
+                                            <p className="text-sm leading-6 text-white/65">
+                                              {
+                                                aula.descricao
+                                              }
+                                            </p>
+                                          ) : (
+                                            <span className="text-sm text-white/30">
+                                              —
+                                            </span>
+                                          )}
+
+                                        </div>
+
+                                      </article>
+                                    ),
+                                  )}
+
+                                </div>
+
+                                {/* MOBILE */}
+
+                                <div className="divide-y divide-white/10 md:hidden">
+
+                                  {grupo.aulas.map(
+                                    (
+                                      aula,
+                                      index,
+                                    ) => (
+                                      <article
+                                        key={
+                                          aula.id
+                                        }
+                                        className="p-5"
+                                      >
+
+                                        <div className="flex items-start gap-3">
+
+                                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#59e199]/10 text-xs font-bold text-[#59e199]">
+                                            {String(
+                                              index +
+                                                1,
+                                            ).padStart(
+                                              2,
+                                              "0",
+                                            )}
+                                          </div>
+
+                                          <div className="min-w-0 flex-1">
+
+                                            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/40">
+                                              Conteúdo
+                                            </span>
+
+                                            <h4 className="mt-1 text-sm font-semibold leading-5 text-white">
+                                              {
+                                                aula.titulo
+                                              }
+                                            </h4>
+
+                                            {aula.descricao && (
+                                              <div className="mt-4">
+
+                                                <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#59e199]">
+                                                  O que o aluno encontrará
+                                                </span>
+
+                                                <p className="mt-1.5 text-sm leading-6 text-white/65">
+                                                  {
+                                                    aula.descricao
+                                                  }
+                                                </p>
+
+                                              </div>
+                                            )}
+
+                                          </div>
+
+                                        </div>
+
+                                      </article>
+                                    ),
+                                  )}
+
+                                </div>
+
+                              </div>
+                            )}
+
+                          </div>
+                        );
+                      },
+                    )}
+
+                  </div>
+                )}
+
+              </div>
+
+            </section>
+          )}
+
+          {/* =============================================
+              PROFESSOR
+          ============================================= */}
+
+          {professor && (
+            <section className="training-section">
+
+              <div className="training-section-heading">
+
+                <span>
+                  ESPECIALISTA
+                </span>
+
+                <h2>
+                  Professor
+                </h2>
+
+              </div>
+
+              <div className="training-professor">
+
+                <div className="training-professor-photo">
+
+                  {professor.foto_url ? (
+                    <img
+                      src={
+                        professor.foto_url
+                      }
+                      alt={
+                        professor.nome
+                      }
+                    />
+                  ) : (
+                    <UserRound
+                      size={
+                        42
+                      }
+                    />
+                  )}
+
+                </div>
+
+                <div className="training-professor-content">
+
+                  <h3>
+                    {
+                      professor.nome
+                    }
+                  </h3>
+
+                  {professor.cargo && (
+                    <span>
+                      {
+                        professor.cargo
+                      }
+                    </span>
+                  )}
+
+                  {professor.descricao && (
+                    <p>
+                      {
+                        professor.descricao
+                      }
+                    </p>
+                  )}
+
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* =============================================
+              CERTIFICADOS
+          ============================================= */}
+
+          {certificados.length >
+            0 && (
+            <section className="training-section">
+
+              <div className="training-section-heading">
+
+                <span>
+                  CERTIFICAÇÃO
+                </span>
+
+                <h2>
+                  Certificados
+                </h2>
+
+              </div>
+
+              <div className="training-certificates">
+
+                {certificados.map(
+                  (
+                    certificado,
+                  ) => (
+                    <article
+                      className="training-certificate"
+                      key={
+                        certificado.id
+                      }
+                    >
+
+                      {certificado.imagem_url && (
+                        <div className="training-certificate-image">
+
+                          <img
+                            src={
+                              certificado.imagem_url
+                            }
+                            alt={
+                              certificado.titulo
+                            }
+                          />
+
+                        </div>
+                      )}
+
+                      <div className="training-certificate-content">
+
+                     
+
+                        <h3>
+                          {
+                            certificado.titulo
+                          }
+                        </h3>
+
+                        {certificado.descricao && (
+                          <p>
+                            {
+                              certificado.descricao
+                            }
+                          </p>
+                        )}
+
+                      </div>
+                    </article>
+                  ),
+                )}
+
+              </div>
+            </section>
+          )}
+
+          {/* =============================================
+              CTA FINAL
+          ============================================= */}
+
+          <section className="training-final-cta">
+
+            <div>
+
+              <span>
+                2BSUPPLY ACADEMY
+              </span>
+
+              <h2>
+                Pronto para
+                desenvolver novas
+                competências?
+              </h2>
+
+              <p>
+                Converse com nossa
+                equipe e saiba mais
+                sobre este
+                treinamento.
+              </p>
+
+            </div>
+
+           <Link
+  href="https://api.whatsapp.com/send?phone=5521999792912" target="_blank"
+  className="primary-button"
+>
+  <svg
+    viewBox="0 0 32 32"
+    aria-hidden="true"
+    style={{
+      width: "20px",
+      height: "20px",
+      fill: "currentColor",
+      stroke: "none",
+      flexShrink: 0,
+    }}
+  >
+    <path d="M16.01 3C8.83 3 3 8.72 3 15.78c0 2.25.6 4.45 1.74 6.39L3 28.5l6.53-1.7a13.1 13.1 0 0 0 6.47 1.68h.01C23.19 28.48 29 22.76 29 15.7 29 8.65 23.19 3 16.01 3Zm0 23.32a10.9 10.9 0 0 1-5.56-1.5l-.4-.24-3.88 1.01 1.04-3.75-.26-.39a10.55 10.55 0 0 1-1.7-5.67c0-5.84 4.83-10.59 10.77-10.59 5.93 0 10.75 4.75 10.75 10.59 0 5.83-4.82 10.54-10.76 10.54Zm5.9-7.92c-.32-.16-1.91-.93-2.21-1.04-.3-.11-.52-.16-.74.16-.22.32-.85 1.04-1.04 1.25-.19.21-.38.24-.71.08-.32-.16-1.36-.49-2.59-1.57-.96-.84-1.61-1.88-1.8-2.2-.19-.32-.02-.49.14-.65.15-.14.32-.37.49-.56.16-.19.22-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.74-1.76-1.01-2.41-.27-.64-.54-.55-.74-.56h-.63c-.22 0-.57.08-.87.4-.3.32-1.15 1.12-1.15 2.73 0 1.61 1.19 3.16 1.35 3.38.16.21 2.34 3.51 5.67 4.92.79.34 1.41.54 1.89.69.79.25 1.52.21 2.09.13.64-.09 1.91-.77 2.18-1.51.27-.75.27-1.39.19-1.52-.08-.13-.3-.21-.62-.37Z" />
+  </svg>
+
+  Falar com um especialista
+</Link>
+
+          </section>
+        </div>
+
+        {/* =================================================
+            CARD LATERAL STICKY
+        ================================================= */}
+
+        <aside
+          className={`training-video-sidebar ${
+            heroVisivel
+              ? "training-video-visible"
+              : "training-video-hidden"
+          }`}
+        >
+          <div className="training-video-card">
+
+            {/* =============================================
+                CAPA / VÍDEO
+            ============================================= */}
+
+            <div className="training-video">
+
+              {curso.imagem_url ? (
+
+                <div className="training-video-image">
+
+                  <img
+                    src={
+                      curso.imagem_url
+                    }
+                    alt={
+                      curso.titulo
+                    }
+                  />
+
+                  {embedUrl && (
+                    <button
+                      type="button"
+                      className="training-video-play"
+                      aria-label="Assistir prévia do curso"
+                      onClick={
+                        abrirPreviaCurso
+                      }
+                    >
+                      <Play
+                        size={
+                          28
+                        }
+                        fill="currentColor"
+                      />
+                    </button>
+                  )}
+
+                </div>
+
+              ) : (
+
+                <div className="training-video-placeholder">
+
+                  <Video
+                    size={42}
+                  />
+
+                  <span>
+                    Vídeo
+                    introdutório
+                  </span>
+
+                  {embedUrl && (
+                    <button
+                      type="button"
+                      className="training-video-placeholder-button"
+                      onClick={
+                        abrirPreviaCurso
+                      }
+                    >
+                      <Play
+                        size={
+                          18
+                        }
+                        fill="currentColor"
+                      />
+
+                      Assistir vídeo
+                    </button>
+                  )}
+
+                </div>
+
+              )}
+
+            </div>
+
+           {/* =============================================
+    CONTEÚDO DO CARD
+============================================= */}
+
+<div className="training-video-content">
+
+  <h3 className="training-video-course-title">
+    {curso.titulo}
+  </h3>
+
+  {/* ===========================================
+      PREÇOS
+  =========================================== */}
+
+  {(curso.preco_de != null ||
+    curso.preco_para != null ||
+    curso.parcelamento) && (
+    <div className="training-video-price">
+
+      {curso.preco_de != null && (
+        <div className="training-video-price-old">
+          <span>De</span>
+
+          <strong>
+            {formatarPreco(
+              curso.preco_de,
+            )}
+          </strong>
+        </div>
+      )}
+
+      {curso.preco_para != null && (
+        <div className="training-video-price-current">
+          <span>Por</span>
+
+          <strong>
+            {formatarPreco(
+              curso.preco_para,
+            )}
+          </strong>
+        </div>
+      )}
+
+      {curso.parcelamento && (
+        <div className="training-video-installments">
+          {curso.parcelamento}
+        </div>
+      )}
+
+    </div>
+  )}
+
+  {/* ===========================================
+      INSCRIÇÃO + ANALYTICS
+  =========================================== */}
+
+  <Link
+    href={
+      curso.link_inscricao ||
+      "/contato"
+    }
+    className="training-video-primary"
+    onClick={
+      handleInscricaoClick
+    }
+  >
+    Inscreva-se agora
+  </Link>
+
+</div>
+</div>
+
+{/* =============================================
+    INFORMAÇÕES FIXAS ABAIXO DO CARD
+============================================= */}
+<div className="mt-3 flex w-full flex-col gap-2 itensimportantes">
+
+  <div className="flex min-h-[42px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#121b27] px-3 py-2.5 text-center text-[11px] font-semibold text-white shadow-sm">
+    <GraduationCap
+      size={16}
+      className="shrink-0 text-[#59e199]"
+    />
+
+    <span>
+      Treinamento profissional
+    </span>
+  </div>
+
+  <div className="flex min-h-[42px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#121b27] px-3 py-2.5 text-center text-[11px] font-semibold text-white shadow-sm">
+    <Clock3
+      size={16}
+      className="shrink-0 text-[#59e199]"
+    />
+
+    <span>
+      Acesso online vitalício
+    </span>
+  </div>
+
+  {professor && (
+    <div className="flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#121b27] px-3 py-2.5 text-center text-[11px] font-semibold text-white shadow-sm">
+      <UserRound
+        size={16}
+        className="shrink-0 text-[#59e199]"
+      />
+
+      <span>
+        {professor.nome}
+      </span>
+    </div>
+  )}
+
+</div>
+
+</aside>
+
+        {/* =================================================
+            MODAL / PRÉVIA DO CURSO
+        ================================================= */}
+
+        <Dialog
+          open={
+            videoModalOpen
+          }
+          onOpenChange={
+            setVideoModalOpen
+          }
+        >
+          <DialogContent
+            className="
+              training-preview-modal
+              !w-[92vw]
+              !max-w-[1150px]
+              overflow-hidden
+              border-0
+              bg-[#15151d]
+              p-0
+              text-white
+              shadow-2xl
+            "
+          >
+
+            {/* =============================================
+                CABEÇALHO
+            ============================================= */}
+
+            <DialogHeader className="training-preview-header">
+
+              <span className="section-kicker">
+                Prévia do curso
+              </span>
+
+              <DialogTitle className="training-preview-title">
+                {
+                  curso.titulo
+                }
+              </DialogTitle>
+
+            </DialogHeader>
+
+            {/* =============================================
+                VÍDEO
+            ============================================= */}
+
+            {embedUrl &&
+              videoModalOpen && (
+                <div className="training-preview-player">
+
+                  <iframe
+                    src={
+                      embedUrl
+                    }
+                    title={`Prévia do curso - ${curso.titulo}`}
+                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+
+                </div>
+              )}
+
+          </DialogContent>
+        </Dialog>
+
+          </div>
+    </main>
+
+    <SiteFooter />
+  </>
+);
+}
