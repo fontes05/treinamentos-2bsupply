@@ -3,12 +3,16 @@ import {
   NextResponse,
 } from "next/server";
 
+import type {
+  SupabaseClient,
+} from "@supabase/supabase-js";
+
 import {
   getHotmartSales,
 } from "@/lib/hotmart";
 
 import {
-  supabaseAdmin,
+  getSupabaseAdmin,
 } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -19,9 +23,20 @@ export const dynamic = "force-dynamic";
 ========================================================= */
 
 type SummaryRow = {
-  gross_amount: number | string | null;
-  hotmart_fee: number | string | null;
-  net_amount: number | string | null;
+  gross_amount:
+    | number
+    | string
+    | null;
+
+  hotmart_fee:
+    | number
+    | string
+    | null;
+
+  net_amount:
+    | number
+    | string
+    | null;
 };
 
 type SummaryTotals = {
@@ -34,13 +49,8 @@ type SummaryTotals = {
    CONSTANTES
 ========================================================= */
 
-/*
- * A Hotmart aceitou normalmente consultas de 30 dias
- * no nosso teste.
- *
- * Para histórico grande dividimos em blocos.
- */
-const HOTMART_CHUNK_DAYS = 30;
+const HOTMART_CHUNK_DAYS =
+  30;
 
 const DAY_MS =
   24 *
@@ -49,7 +59,7 @@ const DAY_MS =
   1000;
 
 /* =========================================================
-   DATA HOTMART → ISO
+   TIMESTAMP HOTMART → ISO
 ========================================================= */
 
 function timestampToIso(
@@ -74,15 +84,19 @@ function timestampToIso(
 }
 
 /* =========================================================
-   SALVAR UM LOTE
+   SALVAR VENDAS
 ========================================================= */
 
 async function salvarVendas(
-  items: Awaited<
-    ReturnType<
-      typeof getHotmartSales
-    >
-  >["items"]
+  supabaseAdmin:
+    SupabaseClient,
+
+  items:
+    Awaited<
+      ReturnType<
+        typeof getHotmartSales
+      >
+    >["items"]
 ) {
   const rows =
     (items ?? []).flatMap(
@@ -119,16 +133,19 @@ async function salvarVendas(
             transaction,
 
             product_id:
-              item.product?.id ??
+              item.product
+                ?.id ??
               null,
 
             product_name:
-              item.product?.name
+              item.product
+                ?.name
                 ?.trim() ??
               null,
 
             status:
-              item.purchase?.status ??
+              item.purchase
+                ?.status ??
               null,
 
             gross_amount:
@@ -189,17 +206,18 @@ async function salvarVendas(
 
   const {
     error,
-  } = await supabaseAdmin
-    .from(
-      "treinamentos_hotmart_vendas"
-    )
-    .upsert(
-      rows,
-      {
-        onConflict:
-          "transaction",
-      }
-    );
+  } =
+    await supabaseAdmin
+      .from(
+        "treinamentos_hotmart_vendas"
+      )
+      .upsert(
+        rows,
+        {
+          onConflict:
+            "transaction",
+        }
+      );
 
   if (error) {
     console.error(
@@ -224,13 +242,22 @@ export async function POST(
 ) {
   try {
     /* =====================================================
+       SUPABASE ADMIN
+    ===================================================== */
+
+    const supabaseAdmin =
+      getSupabaseAdmin();
+
+    /* =====================================================
        BODY
     ===================================================== */
 
     const body =
       await request
         .json()
-        .catch(() => ({}));
+        .catch(
+          () => ({})
+        );
 
     const requestedDays =
       typeof body.days ===
@@ -263,13 +290,20 @@ export async function POST(
        CONTADORES
     ===================================================== */
 
-    let totalReceived = 0;
-    let totalSaved = 0;
-    let totalChunks = 0;
-    let totalPages = 0;
+    let totalReceived =
+      0;
+
+    let totalSaved =
+      0;
+
+    let totalChunks =
+      0;
+
+    let totalPages =
+      0;
 
     /* =====================================================
-       CONSULTAR EM BLOCOS DE 30 DIAS
+       CONSULTAR EM BLOCOS
     ===================================================== */
 
     let chunkStart =
@@ -285,6 +319,7 @@ export async function POST(
             HOTMART_CHUNK_DAYS *
               DAY_MS -
             1,
+
           endDate
         );
 
@@ -309,7 +344,7 @@ export async function POST(
       );
 
       /* ===================================================
-         PAGINAÇÃO DENTRO DO BLOCO
+         PAGINAÇÃO
       =================================================== */
 
       let pageToken:
@@ -334,13 +369,20 @@ export async function POST(
         totalPages++;
 
         const items =
-          data.items ?? [];
+          data.items ??
+          [];
 
         totalReceived +=
           items.length;
 
+        /* ===============================================
+           IMPORTANTE:
+           passa o supabaseAdmin para salvarVendas()
+        =============================================== */
+
         const saved =
           await salvarVendas(
+            supabaseAdmin,
             items
           );
 
@@ -357,8 +399,6 @@ export async function POST(
 
       /* ===================================================
          PRÓXIMO BLOCO
-
-         +1 evita sobreposição exata.
       =================================================== */
 
       chunkStart =
@@ -366,35 +406,39 @@ export async function POST(
     }
 
     /* =====================================================
-       RESUMO DO BANCO
+       RESUMO
     ===================================================== */
 
     const {
       data:
         summaryData,
+
       error:
         summaryError,
-    } = await supabaseAdmin
-      .from(
-        "treinamentos_hotmart_vendas"
-      )
-      .select(`
-        gross_amount,
-        hotmart_fee,
-        net_amount
-      `)
-      .gte(
-        "approved_date",
-        new Date(
-          startDate
-        ).toISOString()
-      )
-      .lte(
-        "approved_date",
-        new Date(
-          endDate
-        ).toISOString()
-      );
+    } =
+      await supabaseAdmin
+        .from(
+          "treinamentos_hotmart_vendas"
+        )
+        .select(`
+          gross_amount,
+          hotmart_fee,
+          net_amount
+        `)
+        .gte(
+          "approved_date",
+
+          new Date(
+            startDate
+          ).toISOString()
+        )
+        .lte(
+          "approved_date",
+
+          new Date(
+            endDate
+          ).toISOString()
+        );
 
     if (
       summaryError
@@ -438,6 +482,7 @@ export async function POST(
 
           return acc;
         },
+
         {
           gross: 0,
           fees: 0,
@@ -446,28 +491,30 @@ export async function POST(
       );
 
     /* =====================================================
-       TOTAL REAL DE REGISTROS
+       TOTAL NO BANCO
     ===================================================== */
 
     const {
       count:
         databaseCount,
+
       error:
         countError,
-    } = await supabaseAdmin
-      .from(
-        "treinamentos_hotmart_vendas"
-      )
-      .select(
-        "id",
-        {
-          count:
-            "exact",
+    } =
+      await supabaseAdmin
+        .from(
+          "treinamentos_hotmart_vendas"
+        )
+        .select(
+          "id",
+          {
+            count:
+              "exact",
 
-          head:
-            true,
-        }
-      );
+            head:
+              true,
+          }
+        );
 
     if (
       countError
@@ -523,27 +570,32 @@ export async function POST(
       totals: {
         gross:
           Number(
-            summary.gross.toFixed(
-              2
-            )
+            summary.gross
+              .toFixed(
+                2
+              )
           ),
 
         fees:
           Number(
-            summary.fees.toFixed(
-              2
-            )
+            summary.fees
+              .toFixed(
+                2
+              )
           ),
 
         net:
           Number(
-            summary.net.toFixed(
-              2
-            )
+            summary.net
+              .toFixed(
+                2
+              )
           ),
       },
     });
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.error(
       "Erro sincronizando Hotmart:",
       error
@@ -554,12 +606,15 @@ export async function POST(
         ok: false,
 
         error:
-          error instanceof Error
+          error instanceof
+            Error
             ? error.message
             : "Erro desconhecido ao sincronizar Hotmart.",
       },
+
       {
-        status: 500,
+        status:
+          500,
       }
     );
   }

@@ -2,49 +2,60 @@ import "server-only";
 
 import {
   createClient,
+  type SupabaseClient,
 } from "@supabase/supabase-js";
 
 /* =========================================================
-   VARIÁVEIS DE AMBIENTE
+   CLIENTE ADMIN
 ========================================================= */
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-const serviceRoleKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY;
+let adminClient:
+  SupabaseClient | null =
+  null;
 
 /* =========================================================
-   VALIDAÇÕES
+   CRIAR CLIENTE SOB DEMANDA
 ========================================================= */
 
-if (!supabaseUrl) {
-  throw new Error(
-    "NEXT_PUBLIC_SUPABASE_URL não configurada."
-  );
+export function getSupabaseAdmin() {
+  if (adminClient) {
+    return adminClient;
+  }
+
+  const supabaseUrl =
+    process.env
+      .NEXT_PUBLIC_SUPABASE_URL;
+
+  const serviceRoleKey =
+    process.env
+      .SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_URL não configurada."
+    );
+  }
+
+  if (!serviceRoleKey) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY não configurada."
+    );
+  }
+
+  adminClient =
+    createClient(
+      supabaseUrl,
+      serviceRoleKey,
+      {
+        auth: {
+          autoRefreshToken:
+            false,
+
+          persistSession:
+            false,
+        },
+      }
+    );
+
+  return adminClient;
 }
-
-if (!serviceRoleKey) {
-  throw new Error(
-    "SUPABASE_SERVICE_ROLE_KEY não configurada."
-  );
-}
-
-/* =========================================================
-   SUPABASE ADMIN
-
-   Somente server-side.
-   Nunca importar em componente "use client".
-========================================================= */
-
-export const supabaseAdmin =
-  createClient(
-    supabaseUrl,
-    serviceRoleKey,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }
-  );
