@@ -9,7 +9,6 @@ import {
 } from "react";
 
 import {
-  CalendarDays,
   CircleDollarSign,
   Download,
   Edit3,
@@ -18,6 +17,7 @@ import {
   ReceiptText,
   RefreshCw,
   Search,
+  ShoppingCart,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -39,6 +39,11 @@ type Recorrencia =
   | "unico"
   | "mensal"
   | "anual";
+
+type Periodo =
+  | 7
+  | 30
+  | 90;
 
 type Custo = {
   id: string;
@@ -65,6 +70,62 @@ type Receita = {
   updated_at: string;
 };
 
+type HotmartVenda = {
+  id: string;
+
+  transaction: string;
+
+  product_id:
+    | number
+    | string
+    | null;
+
+  product_name:
+    | string
+    | null;
+
+  status:
+    | string
+    | null;
+
+  gross_amount:
+    | number
+    | string;
+
+  hotmart_fee:
+    | number
+    | string;
+
+  net_amount:
+    | number
+    | string;
+
+  currency:
+    | string
+    | null;
+
+  payment_method:
+    | string
+    | null;
+
+  is_subscription:
+    boolean;
+
+  order_date:
+    | string
+    | null;
+
+  approved_date:
+    | string
+    | null;
+
+  created_at:
+    string;
+
+  updated_at:
+    string;
+};
+
 type FormCusto = {
   descricao: string;
   categoria: string;
@@ -83,11 +144,6 @@ type FormReceita = {
   data_receita: string;
   observacao: string;
 };
-
-type Periodo =
-  | 7
-  | 30
-  | 90;
 
 /* =========================================================
    HELPERS
@@ -164,6 +220,38 @@ function formatarData(
   );
 }
 
+function formatarDataHora(
+  value:
+    | string
+    | null
+) {
+  if (!value) {
+    return "-";
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat(
+    "pt-BR",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  ).format(date);
+}
+
 function normalizarNumero(
   value:
     | number
@@ -180,35 +268,34 @@ function getPeriodo(
   dias: number
 ) {
   const fim =
-    stringParaData(
-      dataHoje()
-    );
+    new Date();
+
+  fim.setHours(
+    23,
+    59,
+    59,
+    999
+  );
 
   const inicio =
-    new Date(
-      fim
-    );
+    new Date(fim);
 
   inicio.setDate(
     inicio.getDate() -
       (dias - 1)
   );
 
+  inicio.setHours(
+    0,
+    0,
+    0,
+    0
+  );
+
   return {
     inicio,
     fim,
   };
-}
-
-function ultimoDiaMes(
-  ano: number,
-  mes: number
-) {
-  return new Date(
-    ano,
-    mes + 1,
-    0
-  ).getDate();
 }
 
 function dentroDoPeriodo(
@@ -222,14 +309,70 @@ function dentroDoPeriodo(
   );
 }
 
+function statusHotmartValido(
+  status:
+    | string
+    | null
+) {
+  return (
+    status ===
+      "APPROVED" ||
+    status ===
+      "COMPLETE"
+  );
+}
+
+function formatarMetodoPagamento(
+  value:
+    | string
+    | null
+) {
+  if (!value) {
+    return "-";
+  }
+
+  const labels:
+    Record<
+      string,
+      string
+    > = {
+      PIX:
+        "PIX",
+
+      BILLET:
+        "Boleto",
+
+      CREDIT_CARD_VISA:
+        "Visa",
+
+      CREDIT_CARD_MASTERCARD:
+        "Mastercard",
+
+      CREDIT_CARD_ELO:
+        "Elo",
+
+      CREDIT_CARD:
+        "Cartão",
+    };
+
+  return (
+    labels[value] ??
+    value
+      .replace(
+        /_/g,
+        " "
+      )
+  );
+}
+
 /* =========================================================
-   QUANTIDADE DE OCORRÊNCIAS DO CUSTO NO PERÍODO
+   CUSTOS NO PERÍODO
 ========================================================= */
 
-function calcularOcorrencias(
+function valorCustoPeriodo(
   custo: Custo,
-  inicioPeriodo: Date,
-  fimPeriodo: Date
+  inicio: Date,
+  fim: Date
 ) {
   if (!custo.ativo) {
     return 0;
@@ -247,35 +390,71 @@ function calcularOcorrencias(
         )
       : null;
 
+  /* =======================================================
+     CUSTO AINDA NÃO COMEÇOU
+  ======================================================= */
+
   if (
     inicioCusto >
-    fimPeriodo
+    fim
   ) {
     return 0;
   }
+
+  /* =======================================================
+     CUSTO JÁ TERMINOU
+  ======================================================= */
 
   if (
     fimCusto &&
     fimCusto <
-      inicioPeriodo
+      inicio
   ) {
     return 0;
   }
 
+  /* =======================================================
+     PERÍODO EFETIVO
+  ======================================================= */
+
   const inicioEfetivo =
     inicioCusto >
-    inicioPeriodo
+    inicio
       ? inicioCusto
-      : inicioPeriodo;
+      : inicio;
 
   const fimEfetivo =
     fimCusto &&
     fimCusto <
-      fimPeriodo
+      fim
       ? fimCusto
-      : fimPeriodo;
+      : fim;
 
-  /* ÚNICO */
+  const diasAtivos =
+    Math.max(
+      0,
+      Math.floor(
+        (
+          fimEfetivo.getTime() -
+          inicioEfetivo.getTime()
+        ) /
+          (
+            1000 *
+            60 *
+            60 *
+            24
+          )
+      ) + 1
+    );
+
+  const valor =
+    normalizarNumero(
+      custo.valor
+    );
+
+  /* =======================================================
+     CUSTO ÚNICO
+  ======================================================= */
 
   if (
     custo.recorrencia ===
@@ -283,159 +462,58 @@ function calcularOcorrencias(
   ) {
     return dentroDoPeriodo(
       inicioCusto,
-      inicioEfetivo,
-      fimEfetivo
+      inicio,
+      fim
     )
-      ? 1
+      ? valor
       : 0;
   }
 
-  /* MENSAL */
+  /* =======================================================
+     MENSAL
+
+     Converte para valor diário médio:
+     valor mensal / 30
+  ======================================================= */
 
   if (
     custo.recorrencia ===
     "mensal"
   ) {
-    let quantidade =
-      0;
+    const valorDiario =
+      valor / 30;
 
-    const diaBase =
-      inicioCusto.getDate();
-
-    let ano =
-      inicioCusto.getFullYear();
-
-    let mes =
-      inicioCusto.getMonth();
-
-    while (true) {
-      const dia =
-        Math.min(
-          diaBase,
-          ultimoDiaMes(
-            ano,
-            mes
-          )
-        );
-
-      const ocorrencia =
-        new Date(
-          ano,
-          mes,
-          dia,
-          12,
-          0,
-          0
-        );
-
-      if (
-        ocorrencia >
-        fimEfetivo
-      ) {
-        break;
-      }
-
-      if (
-        ocorrencia >=
-          inicioEfetivo &&
-        ocorrencia >=
-          inicioCusto
-      ) {
-        quantidade++;
-      }
-
-      mes++;
-
-      if (mes > 11) {
-        mes = 0;
-        ano++;
-      }
-    }
-
-    return quantidade;
+    return (
+      valorDiario *
+      diasAtivos
+    );
   }
 
-  /* ANUAL */
+  /* =======================================================
+     ANUAL
+
+     Converte para valor diário:
+     valor anual / 365
+  ======================================================= */
 
   if (
     custo.recorrencia ===
     "anual"
   ) {
-    let quantidade =
-      0;
+    const valorDiario =
+      valor / 365;
 
-    const mesBase =
-      inicioCusto.getMonth();
-
-    const diaBase =
-      inicioCusto.getDate();
-
-    for (
-      let ano =
-        inicioCusto.getFullYear();
-      ano <=
-      fimEfetivo.getFullYear();
-      ano++
-    ) {
-      const dia =
-        Math.min(
-          diaBase,
-          ultimoDiaMes(
-            ano,
-            mesBase
-          )
-        );
-
-      const ocorrencia =
-        new Date(
-          ano,
-          mesBase,
-          dia,
-          12,
-          0,
-          0
-        );
-
-      if (
-        ocorrencia >=
-          inicioEfetivo &&
-        ocorrencia <=
-          fimEfetivo &&
-        ocorrencia >=
-          inicioCusto
-      ) {
-        quantidade++;
-      }
-    }
-
-    return quantidade;
+    return (
+      valorDiario *
+      diasAtivos
+    );
   }
 
   return 0;
 }
 
-function valorCustoPeriodo(
-  custo: Custo,
-  inicio: Date,
-  fim: Date
-) {
-  const ocorrencias =
-    calcularOcorrencias(
-      custo,
-      inicio,
-      fim
-    );
-
-  return (
-    normalizarNumero(
-      custo.valor
-    ) *
-    ocorrencias
-  );
-}
-
 /* =========================================================
-   FORM INICIAL
+   FORMS
 ========================================================= */
 
 function custoInicial(): FormCusto {
@@ -444,8 +522,7 @@ function custoInicial(): FormCusto {
     categoria: "",
     tipo: "fixo",
     valor: "",
-    recorrencia:
-      "unico",
+    recorrencia: "unico",
     data_inicio:
       dataHoje(),
     data_fim: "",
@@ -480,33 +557,37 @@ export default function RentabilidadePage() {
     custos,
     setCustos,
   ] =
-    useState<
-      Custo[]
-    >([]);
+    useState<Custo[]>(
+      []
+    );
 
   const [
     receitas,
     setReceitas,
   ] =
+    useState<Receita[]>(
+      []
+    );
+
+  const [
+    vendasHotmart,
+    setVendasHotmart,
+  ] =
     useState<
-      Receita[]
+      HotmartVenda[]
     >([]);
 
   const [
     loading,
     setLoading,
   ] =
-    useState(
-      true
-    );
+    useState(true);
 
   const [
     saving,
     setSaving,
   ] =
-    useState(
-      false
-    );
+    useState(false);
 
   const [
     erro,
@@ -540,9 +621,7 @@ export default function RentabilidadePage() {
     modalCusto,
     setModalCusto,
   ] =
-    useState(
-      false
-    );
+    useState(false);
 
   const [
     editandoCustoId,
@@ -566,9 +645,7 @@ export default function RentabilidadePage() {
     modalReceita,
     setModalReceita,
   ] =
-    useState(
-      false
-    );
+    useState(false);
 
   const [
     editandoReceitaId,
@@ -590,135 +667,189 @@ export default function RentabilidadePage() {
      CARREGAR
   ======================================================= */
 
- const carregar =
-  useCallback(
-    async () => {
-      try {
-        setLoading(true);
-        setErro("");
+  const carregar =
+    useCallback(
+      async () => {
+        try {
+          setLoading(true);
+          setErro("");
 
-        /* =====================================================
-           VERIFICAR USUÁRIO LOGADO
-        ===================================================== */
+          const {
+            data: userData,
+            error: userError,
+          } =
+            await supabase
+              .auth
+              .getUser();
 
-        const {
-          data: userData,
-          error: userError,
-        } =
-          await supabase.auth.getUser();
+          if (
+            userError ||
+            !userData.user
+          ) {
+            throw new Error(
+              "Sua sessão expirou. Faça login novamente."
+            );
+          }
 
-        if (
-          userError ||
-          !userData.user
-        ) {
-          throw new Error(
-            "Sua sessão expirou. Faça login novamente."
+          const {
+            data: isAdmin,
+            error: adminError,
+          } =
+            await supabase.rpc(
+              "treinamentos_is_admin"
+            );
+
+          if (
+            adminError ||
+            isAdmin !== true
+          ) {
+            throw new Error(
+              "Você não possui permissão para acessar os custos e a rentabilidade."
+            );
+          }
+
+          const [
+            custosResponse,
+            receitasResponse,
+            hotmartResponse,
+          ] =
+            await Promise.all([
+              supabase
+                .from(
+                  "treinamentos_custos"
+                )
+                .select("*")
+                .order(
+                  "data_inicio",
+                  {
+                    ascending:
+                      false,
+                  }
+                ),
+
+              supabase
+                .from(
+                  "treinamentos_receitas"
+                )
+                .select("*")
+                .order(
+                  "data_receita",
+                  {
+                    ascending:
+                      false,
+                  }
+                ),
+
+              supabase
+                .from(
+                  "treinamentos_hotmart_vendas"
+                )
+                .select(`
+                  id,
+                  transaction,
+                  product_id,
+                  product_name,
+                  status,
+                  gross_amount,
+                  hotmart_fee,
+                  net_amount,
+                  currency,
+                  payment_method,
+                  is_subscription,
+                  order_date,
+                  approved_date,
+                  created_at,
+                  updated_at
+                `)
+                .order(
+                  "approved_date",
+                  {
+                    ascending:
+                      false,
+                  }
+                ),
+            ]);
+
+          if (
+            custosResponse.error
+          ) {
+            throw new Error(
+              custosResponse
+                .error
+                .message
+            );
+          }
+
+          if (
+            receitasResponse.error
+          ) {
+            throw new Error(
+              receitasResponse
+                .error
+                .message
+            );
+          }
+
+          if (
+            hotmartResponse.error
+          ) {
+            throw new Error(
+              `Hotmart: ${hotmartResponse.error.message}`
+            );
+          }
+
+          setCustos(
+            (
+              custosResponse.data ??
+              []
+            ) as Custo[]
           );
+
+          setReceitas(
+            (
+              receitasResponse.data ??
+              []
+            ) as Receita[]
+          );
+
+          setVendasHotmart(
+            (
+              hotmartResponse.data ??
+              []
+            ) as HotmartVenda[]
+          );
+        } catch (error) {
+          console.error(
+            "Erro ao carregar rentabilidade:",
+            error
+          );
+
+          setErro(
+            error instanceof
+              Error
+              ? error.message
+              : "Não foi possível carregar os dados financeiros."
+          );
+
+          setCustos([]);
+          setReceitas([]);
+          setVendasHotmart([]);
+        } finally {
+          setLoading(false);
         }
+      },
+      [
+        supabase,
+      ]
+    );
 
-        /* =====================================================
-           VERIFICAR ADMIN
-        ===================================================== */
-
-        const {
-          data: isAdmin,
-          error: adminError,
-        } =
-          await supabase.rpc(
-            "treinamentos_is_admin"
-          );
-
-        if (
-          adminError ||
-          isAdmin !== true
-        ) {
-          throw new Error(
-            "Você não possui permissão para acessar os custos e a rentabilidade."
-          );
-        }
-
-        /* =====================================================
-           CARREGAR CUSTOS E RECEITAS
-        ===================================================== */
-
-        const [
-          custosResponse,
-          receitasResponse,
-        ] =
-          await Promise.all([
-            supabase
-              .from(
-                "treinamentos_custos"
-              )
-              .select("*")
-              .order(
-                "data_inicio",
-                {
-                  ascending: false,
-                }
-              ),
-
-            supabase
-              .from(
-                "treinamentos_receitas"
-              )
-              .select("*")
-              .order(
-                "data_receita",
-                {
-                  ascending: false,
-                }
-              ),
-          ]);
-
-        if (
-          custosResponse.error
-        ) {
-          throw new Error(
-            custosResponse.error.message
-          );
-        }
-
-        if (
-          receitasResponse.error
-        ) {
-          throw new Error(
-            receitasResponse.error.message
-          );
-        }
-
-        setCustos(
-          (
-            custosResponse.data ??
-            []
-          ) as Custo[]
-        );
-
-        setReceitas(
-          (
-            receitasResponse.data ??
-            []
-          ) as Receita[]
-        );
-      } catch (error) {
-        console.error(
-          "Erro ao carregar rentabilidade:",
-          error
-        );
-
-        setErro(
-          error instanceof Error
-            ? error.message
-            : "Não foi possível carregar os dados financeiros."
-        );
-
-        setCustos([]);
-        setReceitas([]);
-      } finally {
-        setLoading(false);
-      }
+  useEffect(
+    () => {
+      void carregar();
     },
-    [supabase]
+    [
+      carregar,
+    ]
   );
 
   /* =======================================================
@@ -733,6 +864,56 @@ export default function RentabilidadePage() {
         ),
       [
         periodo,
+      ]
+    );
+
+  /* =======================================================
+     VENDAS HOTMART DO PERÍODO
+  ======================================================= */
+
+  const vendasHotmartPeriodo =
+    useMemo(
+      () => {
+        const {
+          inicio,
+          fim,
+        } =
+          periodoDatas;
+
+        return vendasHotmart.filter(
+          (
+            venda
+          ) => {
+            if (
+              !venda.approved_date
+            ) {
+              return false;
+            }
+
+            if (
+              !statusHotmartValido(
+                venda.status
+              )
+            ) {
+              return false;
+            }
+
+            const data =
+              new Date(
+                venda.approved_date
+              );
+
+            return dentroDoPeriodo(
+              data,
+              inicio,
+              fim
+            );
+          }
+        );
+      },
+      [
+        vendasHotmart,
+        periodoDatas,
       ]
     );
 
@@ -779,7 +960,9 @@ export default function RentabilidadePage() {
           }
         );
 
-        const receita =
+        /* RECEITAS MANUAIS */
+
+        const receitaManual =
           receitas.reduce(
             (
               total,
@@ -810,6 +993,62 @@ export default function RentabilidadePage() {
             0
           );
 
+        /* HOTMART */
+
+        const hotmartBruta =
+          vendasHotmartPeriodo
+            .reduce(
+              (
+                total,
+                venda
+              ) =>
+                total +
+                normalizarNumero(
+                  venda.gross_amount
+                ),
+              0
+            );
+
+        const hotmartTaxas =
+          vendasHotmartPeriodo
+            .reduce(
+              (
+                total,
+                venda
+              ) =>
+                total +
+                normalizarNumero(
+                  venda.hotmart_fee
+                ),
+              0
+            );
+
+        const hotmartLiquida =
+          vendasHotmartPeriodo
+            .reduce(
+              (
+                total,
+                venda
+              ) =>
+                total +
+                normalizarNumero(
+                  venda.net_amount
+                ),
+              0
+            );
+
+        /*
+         * RECEITA USADA NA RENTABILIDADE:
+         *
+         * Hotmart líquida
+         * +
+         * receitas cadastradas manualmente
+         */
+
+        const receita =
+          hotmartLiquida +
+          receitaManual;
+
         const custoTotal =
           custosFixos +
           custosVariaveis;
@@ -820,15 +1059,29 @@ export default function RentabilidadePage() {
 
         const margem =
           receita > 0
-            ? (lucro /
-                receita) *
+            ? (
+                lucro /
+                receita
+              ) *
               100
             : 0;
 
         return {
           receita,
+
+          receitaManual,
+
+          hotmartBruta,
+          hotmartTaxas,
+          hotmartLiquida,
+
+          vendasHotmart:
+            vendasHotmartPeriodo
+              .length,
+
           custosFixos,
           custosVariaveis,
+
           custoTotal,
           lucro,
           margem,
@@ -837,12 +1090,13 @@ export default function RentabilidadePage() {
       [
         custos,
         receitas,
+        vendasHotmartPeriodo,
         periodoDatas,
       ]
     );
 
   /* =======================================================
-     BUSCA
+     BUSCA CUSTOS
   ======================================================= */
 
   const custosFiltrados =
@@ -880,7 +1134,7 @@ export default function RentabilidadePage() {
     );
 
   /* =======================================================
-     CUSTO - NOVO
+     CUSTO
   ======================================================= */
 
   function novoCusto() {
@@ -898,10 +1152,6 @@ export default function RentabilidadePage() {
       true
     );
   }
-
-  /* =======================================================
-     CUSTO - EDITAR
-  ======================================================= */
 
   function editarCusto(
     custo: Custo
@@ -948,10 +1198,6 @@ export default function RentabilidadePage() {
     );
   }
 
-  /* =======================================================
-     SALVAR CUSTO
-  ======================================================= */
-
   async function salvarCusto(
     event:
       React.FormEvent<HTMLFormElement>
@@ -997,10 +1243,7 @@ export default function RentabilidadePage() {
     }
 
     try {
-      setSaving(
-        true
-      );
-
+      setSaving(true);
       setErro("");
 
       const payload = {
@@ -1076,9 +1319,7 @@ export default function RentabilidadePage() {
         }
       }
 
-      setModalCusto(
-        false
-      );
+      setModalCusto(false);
 
       setSucesso(
         editandoCustoId
@@ -1087,29 +1328,21 @@ export default function RentabilidadePage() {
       );
 
       await carregar();
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         error
       );
 
       setErro(
         error instanceof
-        Error
+          Error
           ? error.message
           : "Não foi possível salvar o custo."
       );
     } finally {
-      setSaving(
-        false
-      );
+      setSaving(false);
     }
   }
-
-  /* =======================================================
-     EXCLUIR CUSTO
-  ======================================================= */
 
   async function excluirCusto(
     custo: Custo
@@ -1150,25 +1383,19 @@ export default function RentabilidadePage() {
       );
 
       await carregar();
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         error
       );
 
       setErro(
         error instanceof
-        Error
+          Error
           ? error.message
           : "Não foi possível excluir o custo."
       );
     }
   }
-
-  /* =======================================================
-     ATIVAR / DESATIVAR
-  ======================================================= */
 
   async function alterarStatusCusto(
     custo: Custo
@@ -1197,9 +1424,7 @@ export default function RentabilidadePage() {
       }
 
       await carregar();
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         error
       );
@@ -1211,7 +1436,7 @@ export default function RentabilidadePage() {
   }
 
   /* =======================================================
-     RECEITA
+     RECEITAS MANUAIS
   ======================================================= */
 
   function novaReceita() {
@@ -1296,23 +1521,25 @@ export default function RentabilidadePage() {
     }
 
     try {
-      setSaving(
-        true
-      );
-
+      setSaving(true);
       setErro("");
 
       const payload = {
         descricao:
-          formReceita.descricao.trim(),
+          formReceita
+            .descricao
+            .trim(),
 
         valor,
 
         data_receita:
-          formReceita.data_receita,
+          formReceita
+            .data_receita,
 
         observacao:
-          formReceita.observacao.trim() ||
+          formReceita
+            .observacao
+            .trim() ||
           null,
       };
 
@@ -1358,9 +1585,7 @@ export default function RentabilidadePage() {
         }
       }
 
-      setModalReceita(
-        false
-      );
+      setModalReceita(false);
 
       setSucesso(
         editandoReceitaId
@@ -1369,23 +1594,19 @@ export default function RentabilidadePage() {
       );
 
       await carregar();
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         error
       );
 
       setErro(
         error instanceof
-        Error
+          Error
           ? error.message
           : "Não foi possível salvar a receita."
       );
     } finally {
-      setSaving(
-        false
-      );
+      setSaving(false);
     }
   }
 
@@ -1430,7 +1651,7 @@ export default function RentabilidadePage() {
   }
 
   /* =======================================================
-     CSV
+     CSV CUSTOS
   ======================================================= */
 
   function exportarCSV() {
@@ -1441,19 +1662,24 @@ export default function RentabilidadePage() {
         ) => [
           custo.descricao,
           custo.categoria,
+
           custo.tipo ===
           "fixo"
             ? "Fixo"
             : "Variável",
+
           normalizarNumero(
             custo.valor
           ).toFixed(
             2
           ),
+
           custo.recorrencia,
           custo.data_inicio,
+
           custo.data_fim ??
-            "",
+          "",
+
           custo.ativo
             ? "Ativo"
             : "Inativo",
@@ -1471,70 +1697,80 @@ export default function RentabilidadePage() {
       "Status",
     ];
 
-    const csv = [
-      cabecalho,
-      ...linhas,
-    ]
-      .map(
-        (
-          linha
-        ) =>
-          linha
-            .map(
-              (
-                valor
-              ) =>
-                `"${String(
-                  valor
-                ).replace(
-                  /"/g,
-                  '""'
-                )}"`
-            )
-            .join(
-              ";"
-            )
-      )
-      .join(
-        "\n"
-      );
-
-    const blob =
-      new Blob(
-        [
-          "\uFEFF",
-          csv,
-        ],
-        {
-          type: "text/csv;charset=utf-8;",
-        }
-      );
-
-    const url =
-      URL.createObjectURL(
-        blob
-      );
-
-    const link =
-      document.createElement(
-        "a"
-      );
-
-    link.href =
-      url;
-
-    link.download =
-      `custos-2bsupply-${dataHoje()}.csv`;
-
-    link.click();
-
-    URL.revokeObjectURL(
-      url
+    gerarCSV(
+      [
+        cabecalho,
+        ...linhas,
+      ],
+      `custos-2bsupply-${dataHoje()}.csv`
     );
   }
 
   /* =======================================================
-     GRÁFICO SIMPLES
+     CSV HOTMART
+  ======================================================= */
+
+  function exportarHotmartCSV() {
+    const linhas =
+      vendasHotmartPeriodo
+        .map(
+          (
+            venda
+          ) => [
+            venda.transaction,
+
+            venda.product_name ??
+            "",
+
+            venda.status ??
+            "",
+
+            normalizarNumero(
+              venda.gross_amount
+            ).toFixed(
+              2
+            ),
+
+            normalizarNumero(
+              venda.hotmart_fee
+            ).toFixed(
+              2
+            ),
+
+            normalizarNumero(
+              venda.net_amount
+            ).toFixed(
+              2
+            ),
+
+            venda.payment_method ??
+            "",
+
+            venda.approved_date ??
+            "",
+          ]
+        );
+
+    gerarCSV(
+      [
+        [
+          "Transação",
+          "Produto",
+          "Status",
+          "Valor bruto",
+          "Taxa Hotmart",
+          "Valor líquido",
+          "Pagamento",
+          "Aprovação",
+        ],
+        ...linhas,
+      ],
+      `vendas-hotmart-${periodo}-dias-${dataHoje()}.csv`
+    );
+  }
+
+  /* =======================================================
+     GRÁFICO
   ======================================================= */
 
   const maiorValor =
@@ -1576,14 +1812,11 @@ export default function RentabilidadePage() {
   return (
     <div className="mx-auto max-w-[1600px] space-y-7">
 
-      {/* ===================================================
-          HEADER
-      =================================================== */}
+      {/* HEADER */}
 
       <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
 
         <div>
-
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-emerald-600">
             <TrendingUp
               size={16}
@@ -1597,9 +1830,8 @@ export default function RentabilidadePage() {
           </h2>
 
           <p className="mt-2 text-sm text-zinc-500">
-            Acompanhe receitas, custos operacionais, lucro e margem dos treinamentos.
+            Vendas Hotmart, receitas adicionais, custos, lucro e margem dos treinamentos.
           </p>
-
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -1660,10 +1892,7 @@ export default function RentabilidadePage() {
           </button>
 
         </div>
-
       </div>
-
-      {/* MENSAGENS */}
 
       {erro && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -1678,19 +1907,19 @@ export default function RentabilidadePage() {
       )}
 
       {/* ===================================================
-          CARDS
+          CARDS GERAIS
       =================================================== */}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
 
         <MetricCard
-          titulo="Receita no período"
+          titulo="Receita líquida total"
           valor={
             formatarMoeda(
               metricas.receita
             )
           }
-          descricao={`${periodo} dias`}
+          descricao="Hotmart líquida + outras receitas"
           icon={
             <CircleDollarSign
               size={20}
@@ -1751,7 +1980,7 @@ export default function RentabilidadePage() {
               metricas.lucro
             )
           }
-          descricao="receita - custos"
+          descricao="receita líquida - custos"
           icon={
             metricas.lucro >=
             0 ? (
@@ -1777,7 +2006,7 @@ export default function RentabilidadePage() {
           valor={`${metricas.margem.toFixed(
             1
           )}%`}
-          descricao="margem estimada"
+          descricao="lucro / receita líquida"
           icon={
             <TrendingUp
               size={20}
@@ -1794,6 +2023,280 @@ export default function RentabilidadePage() {
       </div>
 
       {/* ===================================================
+          HOTMART
+      =================================================== */}
+
+      <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
+
+        <div className="flex flex-col justify-between gap-4 border-b border-zinc-200 px-6 py-5 sm:flex-row sm:items-center">
+
+          <div>
+            <div className="flex items-center gap-2">
+
+              <ShoppingCart
+                size={18}
+                className="text-emerald-600"
+              />
+
+              <h3 className="font-semibold text-zinc-950">
+                Vendas Hotmart
+              </h3>
+
+            </div>
+
+            <p className="mt-1 text-sm text-zinc-500">
+              Valores calculados pelas vendas aprovadas e concluídas nos últimos {periodo} dias.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={
+              exportarHotmartCSV
+            }
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+          >
+            <Download
+              size={16}
+            />
+
+            Exportar CSV
+          </button>
+
+        </div>
+
+        <div className="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-4">
+
+          <MetricCard
+            titulo="Vendas"
+            valor={
+              String(
+                metricas.vendasHotmart
+              )
+            }
+            descricao={`últimos ${periodo} dias`}
+            icon={
+              <ShoppingCart
+                size={20}
+              />
+            }
+          />
+
+          <MetricCard
+            titulo="Receita bruta"
+            valor={
+              formatarMoeda(
+                metricas.hotmartBruta
+              )
+            }
+            descricao="valor das vendas"
+            icon={
+              <CircleDollarSign
+                size={20}
+              />
+            }
+            tipo="positivo"
+          />
+
+          <MetricCard
+            titulo="Taxas Hotmart"
+            valor={
+              formatarMoeda(
+                metricas.hotmartTaxas
+              )
+            }
+            descricao="descontado pela plataforma"
+            icon={
+              <TrendingDown
+                size={20}
+              />
+            }
+            tipo="negativo"
+          />
+
+          <MetricCard
+            titulo="Receita líquida Hotmart"
+            valor={
+              formatarMoeda(
+                metricas.hotmartLiquida
+              )
+            }
+            descricao="bruta - taxas"
+            icon={
+              <TrendingUp
+                size={20}
+              />
+            }
+            tipo="positivo"
+          />
+
+        </div>
+
+        <div className="overflow-x-auto border-t border-zinc-100">
+
+          <table className="w-full">
+
+            <thead className="border-b border-zinc-200 bg-zinc-50/80">
+
+              <tr>
+                <Th>
+                  Data
+                </Th>
+
+                <Th>
+                  Produto
+                </Th>
+
+                <Th>
+                  Status
+                </Th>
+
+                <Th>
+                  Bruto
+                </Th>
+
+                <Th>
+                  Taxa
+                </Th>
+
+                <Th>
+                  Líquido
+                </Th>
+
+                <Th>
+                  Pagamento
+                </Th>
+
+                <Th>
+                  Transação
+                </Th>
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              {vendasHotmartPeriodo.length ===
+              0 ? (
+
+                <tr>
+                  <td
+                    colSpan={
+                      8
+                    }
+                    className="px-6 py-14 text-center text-sm text-zinc-500"
+                  >
+                    Nenhuma venda Hotmart encontrada neste período.
+                  </td>
+                </tr>
+
+              ) : (
+
+                vendasHotmartPeriodo.map(
+                  (
+                    venda
+                  ) => (
+
+                    <tr
+                      key={
+                        venda.id
+                      }
+                      className="border-b border-zinc-100 last:border-0"
+                    >
+
+                      <Td>
+                        {formatarDataHora(
+                          venda.approved_date
+                        )}
+                      </Td>
+
+                      <Td className="max-w-[360px] whitespace-normal">
+
+                        <div className="font-medium text-zinc-900">
+                          {venda.product_name ??
+                            "Produto Hotmart"}
+                        </div>
+
+                      </Td>
+
+                      <Td>
+
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            venda.status ===
+                            "COMPLETE"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-blue-50 text-blue-700"
+                          }`}
+                        >
+                          {venda.status ===
+                          "COMPLETE"
+                            ? "Concluída"
+                            : venda.status ===
+                                "APPROVED"
+                              ? "Aprovada"
+                              : venda.status ??
+                                "-"}
+                        </span>
+
+                      </Td>
+
+                      <Td>
+                        {formatarMoeda(
+                          normalizarNumero(
+                            venda.gross_amount
+                          )
+                        )}
+                      </Td>
+
+                      <Td>
+                        <span className="text-red-600">
+                          -
+                          {formatarMoeda(
+                            normalizarNumero(
+                              venda.hotmart_fee
+                            )
+                          )}
+                        </span>
+                      </Td>
+
+                      <Td>
+                        <strong className="text-emerald-700">
+                          {formatarMoeda(
+                            normalizarNumero(
+                              venda.net_amount
+                            )
+                          )}
+                        </strong>
+                      </Td>
+
+                      <Td>
+                        {formatarMetodoPagamento(
+                          venda.payment_method
+                        )}
+                      </Td>
+
+                      <Td>
+                        <span className="font-mono text-xs text-zinc-500">
+                          {venda.transaction}
+                        </span>
+                      </Td>
+
+                    </tr>
+
+                  )
+                )
+
+              )}
+
+            </tbody>
+          </table>
+
+        </div>
+
+      </section>
+
+      {/* ===================================================
           RECEITA X CUSTOS
       =================================================== */}
 
@@ -1806,7 +2309,7 @@ export default function RentabilidadePage() {
           </h3>
 
           <p className="mt-1 text-sm text-zinc-500">
-            Comparação financeira do período selecionado.
+            Receita líquida Hotmart + outras receitas cadastradas.
           </p>
 
         </div>
@@ -1814,7 +2317,7 @@ export default function RentabilidadePage() {
         <div className="space-y-7 p-6">
 
           <FinanceBar
-            titulo="Receita"
+            titulo="Receita líquida total"
             valor={
               metricas.receita
             }
@@ -1875,7 +2378,6 @@ export default function RentabilidadePage() {
         <div className="flex flex-col justify-between gap-4 border-b border-zinc-200 px-6 py-5 lg:flex-row lg:items-center">
 
           <div>
-
             <h3 className="font-semibold text-zinc-950">
               Custos cadastrados
             </h3>
@@ -1883,7 +2385,6 @@ export default function RentabilidadePage() {
             <p className="mt-1 text-sm text-zinc-500">
               Cadastre, edite e gerencie todos os custos da operação.
             </p>
-
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -1903,8 +2404,7 @@ export default function RentabilidadePage() {
                   event
                 ) =>
                   setBusca(
-                    event.target
-                      .value
+                    event.target.value
                   )
                 }
                 placeholder="Buscar custo..."
@@ -1952,7 +2452,6 @@ export default function RentabilidadePage() {
             <thead className="border-b border-zinc-200 bg-zinc-50/80">
 
               <tr>
-
                 <Th>
                   Descrição
                 </Th>
@@ -1984,7 +2483,6 @@ export default function RentabilidadePage() {
                 <Th className="text-right">
                   Ações
                 </Th>
-
               </tr>
 
             </thead>
@@ -1995,7 +2493,6 @@ export default function RentabilidadePage() {
               0 ? (
 
                 <tr>
-
                   <td
                     colSpan={
                       8
@@ -2004,7 +2501,6 @@ export default function RentabilidadePage() {
                   >
                     Nenhum custo cadastrado.
                   </td>
-
                 </tr>
 
               ) : (
@@ -2022,31 +2518,22 @@ export default function RentabilidadePage() {
                     >
 
                       <Td>
-
                         <div className="font-medium text-zinc-900">
-                          {
-                            custo.descricao
-                          }
+                          {custo.descricao}
                         </div>
 
                         {custo.observacao && (
                           <div className="mt-1 max-w-[300px] truncate text-xs text-zinc-400">
-                            {
-                              custo.observacao
-                            }
+                            {custo.observacao}
                           </div>
                         )}
-
                       </Td>
 
                       <Td>
-                        {
-                          custo.categoria
-                        }
+                        {custo.categoria}
                       </Td>
 
                       <Td>
-
                         <span
                           className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
                             custo.tipo ===
@@ -2060,11 +2547,9 @@ export default function RentabilidadePage() {
                             ? "Fixo"
                             : "Variável"}
                         </span>
-
                       </Td>
 
                       <Td>
-
                         <strong className="text-zinc-900">
                           {formatarMoeda(
                             normalizarNumero(
@@ -2072,7 +2557,6 @@ export default function RentabilidadePage() {
                             )
                           )}
                         </strong>
-
                       </Td>
 
                       <Td className="capitalize">
@@ -2092,7 +2576,6 @@ export default function RentabilidadePage() {
                       </Td>
 
                       <Td>
-
                         <button
                           type="button"
                           onClick={() =>
@@ -2110,11 +2593,9 @@ export default function RentabilidadePage() {
                             ? "Ativo"
                             : "Inativo"}
                         </button>
-
                       </Td>
 
                       <Td>
-
                         <div className="flex justify-end gap-1">
 
                           <button
@@ -2148,7 +2629,6 @@ export default function RentabilidadePage() {
                           </button>
 
                         </div>
-
                       </Td>
 
                     </tr>
@@ -2167,7 +2647,7 @@ export default function RentabilidadePage() {
       </section>
 
       {/* ===================================================
-          RECEITAS
+          OUTRAS RECEITAS
       =================================================== */}
 
       <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
@@ -2175,15 +2655,13 @@ export default function RentabilidadePage() {
         <div className="flex flex-col justify-between gap-4 border-b border-zinc-200 px-6 py-5 sm:flex-row sm:items-center">
 
           <div>
-
             <h3 className="font-semibold text-zinc-950">
-              Receitas
+              Outras receitas
             </h3>
 
             <p className="mt-1 text-sm text-zinc-500">
-              Informe manualmente as receitas para calcular lucro e margem.
+              Cadastre somente receitas que não vieram da Hotmart. Elas serão somadas à receita líquida da Hotmart.
             </p>
-
           </div>
 
           <button
@@ -2202,6 +2680,15 @@ export default function RentabilidadePage() {
 
         </div>
 
+        <div className="border-b border-zinc-100 bg-zinc-50/50 px-6 py-3 text-sm text-zinc-600">
+          Total de outras receitas no período:{" "}
+          <strong className="text-zinc-950">
+            {formatarMoeda(
+              metricas.receitaManual
+            )}
+          </strong>
+        </div>
+
         <div className="overflow-x-auto">
 
           <table className="w-full">
@@ -2209,7 +2696,6 @@ export default function RentabilidadePage() {
             <thead className="border-b border-zinc-200 bg-zinc-50/80">
 
               <tr>
-
                 <Th>
                   Descrição
                 </Th>
@@ -2225,7 +2711,6 @@ export default function RentabilidadePage() {
                 <Th className="text-right">
                   Ações
                 </Th>
-
               </tr>
 
             </thead>
@@ -2236,16 +2721,14 @@ export default function RentabilidadePage() {
               0 ? (
 
                 <tr>
-
                   <td
                     colSpan={
                       4
                     }
                     className="px-6 py-12 text-center text-sm text-zinc-500"
                   >
-                    Nenhuma receita cadastrada.
+                    Nenhuma receita adicional cadastrada.
                   </td>
-
                 </tr>
 
               ) : (
@@ -2264,9 +2747,7 @@ export default function RentabilidadePage() {
 
                       <Td>
                         <strong className="text-zinc-900">
-                          {
-                            receita.descricao
-                          }
+                          {receita.descricao}
                         </strong>
                       </Td>
 
@@ -2287,7 +2768,6 @@ export default function RentabilidadePage() {
                       </Td>
 
                       <Td>
-
                         <div className="flex justify-end gap-1">
 
                           <button
@@ -2319,7 +2799,6 @@ export default function RentabilidadePage() {
                           </button>
 
                         </div>
-
                       </Td>
 
                     </tr>
@@ -2381,8 +2860,7 @@ export default function RentabilidadePage() {
                     ) => ({
                       ...atual,
                       descricao:
-                        event.target
-                          .value,
+                        event.target.value,
                     })
                   )
                 }
@@ -2411,8 +2889,7 @@ export default function RentabilidadePage() {
                       ) => ({
                         ...atual,
                         categoria:
-                          event.target
-                            .value,
+                          event.target.value,
                       })
                     )
                   }
@@ -2443,8 +2920,7 @@ export default function RentabilidadePage() {
                       ) => ({
                         ...atual,
                         valor:
-                          event.target
-                            .value,
+                          event.target.value,
                       })
                     )
                   }
@@ -2462,7 +2938,6 @@ export default function RentabilidadePage() {
               <Campo
                 label="Tipo"
               >
-
                 <select
                   value={
                     formCusto.tipo
@@ -2493,13 +2968,11 @@ export default function RentabilidadePage() {
                     Variável
                   </option>
                 </select>
-
               </Campo>
 
               <Campo
                 label="Recorrência"
               >
-
                 <select
                   value={
                     formCusto.recorrencia
@@ -2534,7 +3007,6 @@ export default function RentabilidadePage() {
                     Anual
                   </option>
                 </select>
-
               </Campo>
 
             </div>
@@ -2544,7 +3016,6 @@ export default function RentabilidadePage() {
               <Campo
                 label="Data inicial"
               >
-
                 <input
                   required
                   type="date"
@@ -2560,8 +3031,7 @@ export default function RentabilidadePage() {
                       ) => ({
                         ...atual,
                         data_inicio:
-                          event.target
-                            .value,
+                          event.target.value,
                       })
                     )
                   }
@@ -2569,14 +3039,12 @@ export default function RentabilidadePage() {
                     inputClass
                   }
                 />
-
               </Campo>
 
               <Campo
                 label="Data final"
                 optional
               >
-
                 <input
                   type="date"
                   value={
@@ -2591,8 +3059,7 @@ export default function RentabilidadePage() {
                       ) => ({
                         ...atual,
                         data_fim:
-                          event.target
-                            .value,
+                          event.target.value,
                       })
                     )
                   }
@@ -2600,7 +3067,6 @@ export default function RentabilidadePage() {
                     inputClass
                   }
                 />
-
               </Campo>
 
             </div>
@@ -2609,7 +3075,6 @@ export default function RentabilidadePage() {
               label="Observação"
               optional
             >
-
               <textarea
                 value={
                   formCusto.observacao
@@ -2623,8 +3088,7 @@ export default function RentabilidadePage() {
                     ) => ({
                       ...atual,
                       observacao:
-                        event.target
-                          .value,
+                        event.target.value,
                     })
                   )
                 }
@@ -2634,7 +3098,6 @@ export default function RentabilidadePage() {
                 placeholder="Observações sobre este custo..."
                 className={`${inputClass} h-auto min-h-[90px] py-3`}
               />
-
             </Campo>
 
             <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
@@ -2653,8 +3116,7 @@ export default function RentabilidadePage() {
                     ) => ({
                       ...atual,
                       ativo:
-                        event.target
-                          .checked,
+                        event.target.checked,
                     })
                   )
                 }
@@ -2662,7 +3124,6 @@ export default function RentabilidadePage() {
               />
 
               <div>
-
                 <p className="text-sm font-medium text-zinc-900">
                   Custo ativo
                 </p>
@@ -2670,7 +3131,6 @@ export default function RentabilidadePage() {
                 <p className="text-xs text-zinc-500">
                   Custos inativos não entram nos cálculos.
                 </p>
-
               </div>
 
             </label>
@@ -2709,7 +3169,7 @@ export default function RentabilidadePage() {
               ? "Editar receita"
               : "Adicionar receita"
           }
-          descricao="Cadastre uma receita recebida no período."
+          descricao="Cadastre uma receita que não veio da Hotmart."
           onClose={() =>
             setModalReceita(
               false
@@ -2727,7 +3187,6 @@ export default function RentabilidadePage() {
             <Campo
               label="Descrição"
             >
-
               <input
                 required
                 value={
@@ -2742,17 +3201,15 @@ export default function RentabilidadePage() {
                     ) => ({
                       ...atual,
                       descricao:
-                        event.target
-                          .value,
+                        event.target.value,
                     })
                   )
                 }
-                placeholder="Ex: Venda treinamento..."
+                placeholder="Ex: Venda direta / PIX..."
                 className={
                   inputClass
                 }
               />
-
             </Campo>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -2760,7 +3217,6 @@ export default function RentabilidadePage() {
               <Campo
                 label="Valor"
               >
-
                 <input
                   required
                   type="number"
@@ -2778,8 +3234,7 @@ export default function RentabilidadePage() {
                       ) => ({
                         ...atual,
                         valor:
-                          event.target
-                            .value,
+                          event.target.value,
                       })
                     )
                   }
@@ -2787,13 +3242,11 @@ export default function RentabilidadePage() {
                     inputClass
                   }
                 />
-
               </Campo>
 
               <Campo
                 label="Data"
               >
-
                 <input
                   required
                   type="date"
@@ -2809,8 +3262,7 @@ export default function RentabilidadePage() {
                       ) => ({
                         ...atual,
                         data_receita:
-                          event.target
-                            .value,
+                          event.target.value,
                       })
                     )
                   }
@@ -2818,7 +3270,6 @@ export default function RentabilidadePage() {
                     inputClass
                   }
                 />
-
               </Campo>
 
             </div>
@@ -2827,7 +3278,6 @@ export default function RentabilidadePage() {
               label="Observação"
               optional
             >
-
               <textarea
                 rows={
                   3
@@ -2844,14 +3294,12 @@ export default function RentabilidadePage() {
                     ) => ({
                       ...atual,
                       observacao:
-                        event.target
-                          .value,
+                        event.target.value,
                     })
                   )
                 }
                 className={`${inputClass} h-auto min-h-[90px] py-3`}
               />
-
             </Campo>
 
             <ModalFooter
@@ -2877,6 +3325,75 @@ export default function RentabilidadePage() {
       )}
 
     </div>
+  );
+}
+
+/* =========================================================
+   CSV
+========================================================= */
+
+function gerarCSV(
+  linhas:
+    (
+      | string
+      | number
+    )[][],
+  filename: string
+) {
+  const csv =
+    linhas
+      .map(
+        (
+          linha
+        ) =>
+          linha
+            .map(
+              (
+                valor
+              ) =>
+                `"${String(
+                  valor
+                ).replace(
+                  /"/g,
+                  '""'
+                )}"`
+            )
+            .join(";")
+      )
+      .join("\n");
+
+  const blob =
+    new Blob(
+      [
+        "\uFEFF",
+        csv,
+      ],
+      {
+        type:
+          "text/csv;charset=utf-8;",
+      }
+    );
+
+  const url =
+    URL.createObjectURL(
+      blob
+    );
+
+  const link =
+    document.createElement(
+      "a"
+    );
+
+  link.href =
+    url;
+
+  link.download =
+    filename;
+
+  link.click();
+
+  URL.revokeObjectURL(
+    url
   );
 }
 
@@ -2957,7 +3474,6 @@ function MetricCard({
       <div className="flex items-start justify-between gap-3">
 
         <div>
-
           <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
             {titulo}
           </p>
@@ -2976,7 +3492,6 @@ function MetricCard({
           <p className="mt-2 text-xs text-zinc-400">
             {descricao}
           </p>
-
         </div>
 
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${classes}`}>
@@ -3012,8 +3527,10 @@ function FinanceBar({
       0,
       Math.min(
         100,
-        (valor /
-          max) *
+        (
+          valor /
+          max
+        ) *
           100
       )
     );
@@ -3022,7 +3539,6 @@ function FinanceBar({
     <div>
 
       <div className="mb-2 flex items-center justify-between gap-3">
-
         <span className="text-sm font-semibold text-zinc-800">
           {titulo}
         </span>
@@ -3032,7 +3548,6 @@ function FinanceBar({
             valor
           )}
         </strong>
-
       </div>
 
       <div className="h-6 overflow-hidden rounded-full bg-zinc-100">
@@ -3040,7 +3555,8 @@ function FinanceBar({
         <div
           className={`h-full rounded-full transition-all ${className}`}
           style={{
-            width: `${largura}%`,
+            width:
+              `${largura}%`,
           }}
         />
 
@@ -3114,7 +3630,6 @@ function Modal({
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-200 bg-white px-6 py-5">
 
           <div>
-
             <h3 className="text-lg font-bold text-zinc-950">
               {titulo}
             </h3>
@@ -3122,7 +3637,6 @@ function Modal({
             <p className="mt-1 text-sm text-zinc-500">
               {descricao}
             </p>
-
           </div>
 
           <button
@@ -3167,7 +3681,6 @@ function Campo({
     <label className="block">
 
       <div className="mb-2 flex items-center gap-2">
-
         <span className="text-sm font-medium text-zinc-700">
           {label}
         </span>
@@ -3177,7 +3690,6 @@ function Campo({
             opcional
           </span>
         )}
-
       </div>
 
       {children}
