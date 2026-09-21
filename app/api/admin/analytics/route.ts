@@ -1,8 +1,17 @@
-import { BetaAnalyticsDataClient } from "@google-analytics/data";
-import { NextRequest, NextResponse } from "next/server";
+import {
+  BetaAnalyticsDataClient,
+} from "@google-analytics/data";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+export const runtime =
+  "nodejs";
+
+export const dynamic =
+  "force-dynamic";
 
 /* =========================================================
    CONFIGURAÇÃO
@@ -12,13 +21,16 @@ const propertyId =
   process.env.GA_PROPERTY_ID;
 
 const clientEmail =
-  process.env.GOOGLE_ANALYTICS_CLIENT_EMAIL;
+  process.env
+    .GOOGLE_ANALYTICS_CLIENT_EMAIL;
 
 const privateKey =
-  process.env.GOOGLE_ANALYTICS_PRIVATE_KEY?.replace(
-    /\\n/g,
-    "\n"
-  );
+  process.env
+    .GOOGLE_ANALYTICS_PRIVATE_KEY
+    ?.replace(
+      /\\n/g,
+      "\n",
+    );
 
 /* =========================================================
    CLIENTE GOOGLE ANALYTICS
@@ -27,26 +39,29 @@ const privateKey =
 function getAnalyticsClient() {
   if (!propertyId) {
     throw new Error(
-      "GA_PROPERTY_ID não configurado."
+      "GA_PROPERTY_ID não configurado.",
     );
   }
 
   if (!clientEmail) {
     throw new Error(
-      "GOOGLE_ANALYTICS_CLIENT_EMAIL não configurado."
+      "GOOGLE_ANALYTICS_CLIENT_EMAIL não configurado.",
     );
   }
 
   if (!privateKey) {
     throw new Error(
-      "GOOGLE_ANALYTICS_PRIVATE_KEY não configurado."
+      "GOOGLE_ANALYTICS_PRIVATE_KEY não configurado.",
     );
   }
 
   return new BetaAnalyticsDataClient({
     credentials: {
-      client_email: clientEmail,
-      private_key: privateKey,
+      client_email:
+        clientEmail,
+
+      private_key:
+        privateKey,
     },
   });
 }
@@ -56,9 +71,13 @@ function getAnalyticsClient() {
 ========================================================= */
 
 function numero(
-  value?: string | null
+  value?:
+    | string
+    | null,
 ) {
-  return Number(value ?? 0);
+  return Number(
+    value ?? 0,
+  );
 }
 
 /* =========================================================
@@ -66,14 +85,32 @@ function numero(
 ========================================================= */
 
 function normalizarOrigem(
-  source: string
+  source: string,
 ) {
   const value =
     source
       .toLowerCase()
       .trim();
 
-  /* DIRETO */
+  /* =====================================================
+     MEET ALFRED
+  ===================================================== */
+
+  if (
+    value ===
+      "meetalfred" ||
+    value ===
+      "meet alfred" ||
+    value.includes(
+      "meetalfred",
+    )
+  ) {
+    return "Meet Alfred";
+  }
+
+  /* =====================================================
+     DIRETO
+  ===================================================== */
 
   if (
     value === "(direct)" ||
@@ -82,94 +119,196 @@ function normalizarOrigem(
     return "Direto";
   }
 
-  /* BUSCADORES */
+  /* =====================================================
+     BUSCADORES
+  ===================================================== */
 
   if (
-    value.includes("google")
+    value.includes(
+      "google",
+    )
   ) {
     return "Google";
   }
 
   if (
-    value.includes("bing")
+    value.includes(
+      "bing",
+    )
   ) {
     return "Bing";
   }
 
-  /* INSTAGRAM */
+  /* =====================================================
+     INSTAGRAM
+  ===================================================== */
 
   if (
-    value.includes("instagram") ||
-    value.includes("l.instagram.com")
+    value.includes(
+      "instagram",
+    ) ||
+    value.includes(
+      "l.instagram.com",
+    )
   ) {
     return "Instagram";
   }
 
-  /* FACEBOOK */
+  /* =====================================================
+     FACEBOOK
+  ===================================================== */
 
   if (
-    value.includes("facebook") ||
-    value.includes("fb.com") ||
-    value.includes("m.facebook.com") ||
-    value.includes("l.facebook.com")
+    value.includes(
+      "facebook",
+    ) ||
+    value.includes(
+      "fb.com",
+    ) ||
+    value.includes(
+      "m.facebook.com",
+    ) ||
+    value.includes(
+      "l.facebook.com",
+    )
   ) {
     return "Facebook";
   }
 
-  /* LINKEDIN */
+  /* =====================================================
+     LINKEDIN
+  ===================================================== */
 
   if (
-    value.includes("linkedin")
+    value.includes(
+      "linkedin",
+    )
   ) {
     return "LinkedIn";
   }
 
-  /* WHATSAPP */
+  /* =====================================================
+     WHATSAPP
+  ===================================================== */
 
   if (
-    value.includes("whatsapp") ||
-    value.includes("wa.me")
+    value.includes(
+      "whatsapp",
+    ) ||
+    value.includes(
+      "wa.me",
+    )
   ) {
     return "WhatsApp";
   }
 
-  /* TIKTOK */
+  /* =====================================================
+     TIKTOK
+  ===================================================== */
 
   if (
-    value.includes("tiktok")
+    value.includes(
+      "tiktok",
+    )
   ) {
     return "TikTok";
   }
 
-  /* YOUTUBE */
+  /* =====================================================
+     YOUTUBE
+  ===================================================== */
 
   if (
-    value.includes("youtube") ||
-    value.includes("youtu.be")
+    value.includes(
+      "youtube",
+    ) ||
+    value.includes(
+      "youtu.be",
+    )
   ) {
     return "YouTube";
   }
 
-  /* X / TWITTER */
+  /* =====================================================
+     X / TWITTER
+  ===================================================== */
 
   if (
-    value.includes("twitter") ||
+    value.includes(
+      "twitter",
+    ) ||
     value === "t.co" ||
-    value.includes("x.com")
+    value.includes(
+      "x.com",
+    )
   ) {
     return "X / Twitter";
   }
 
-  /* SEM IDENTIFICAÇÃO */
+  /* =====================================================
+     SEM IDENTIFICAÇÃO
+  ===================================================== */
 
-if (
-  value === "(not set)" ||
-  value === ""
-) {
-  return "Não identificado";
-}
+  if (
+    value ===
+      "(not set)" ||
+    value === ""
+  ) {
+    return "Não identificado";
+  }
 
   return source;
+}
+
+/* =========================================================
+   NORMALIZAR CANAL
+
+   Garante que links com:
+   utm_medium=email
+
+   apareçam como Email mesmo se o agrupamento automático
+   do GA4 eventualmente vier como Unassigned.
+========================================================= */
+
+function normalizarCanal(
+  canal: string,
+  midia: string,
+) {
+  const canalNormalizado =
+    canal
+      ?.trim();
+
+  const midiaNormalizada =
+    midia
+      ?.trim()
+      .toLowerCase();
+
+  /* =====================================================
+     EMAIL
+  ===================================================== */
+
+  if (
+    midiaNormalizada ===
+      "email" ||
+    midiaNormalizada ===
+      "e-mail"
+  ) {
+    return "Email";
+  }
+
+  /* =====================================================
+     FALLBACK
+  ===================================================== */
+
+  if (
+    !canalNormalizado ||
+    canalNormalizado ===
+      "(not set)"
+  ) {
+    return "Unassigned";
+  }
+
+  return canalNormalizado;
 }
 
 /* =========================================================
@@ -187,7 +326,7 @@ type Origem = {
 ========================================================= */
 
 function agruparOrigens(
-  itens: Origem[]
+  itens: Origem[],
 ) {
   const mapa =
     new Map<
@@ -200,7 +339,7 @@ function agruparOrigens(
   ) {
     const atual =
       mapa.get(
-        item.origem
+        item.origem,
       );
 
     if (atual) {
@@ -214,13 +353,13 @@ function agruparOrigens(
         item.origem,
         {
           ...item,
-        }
+        },
       );
     }
   }
 
   return Array.from(
-    mapa.values()
+    mapa.values(),
   );
 }
 
@@ -229,12 +368,12 @@ function agruparOrigens(
 ========================================================= */
 
 export async function GET(
-  request: NextRequest
+  request: NextRequest,
 ) {
   try {
     if (!propertyId) {
       throw new Error(
-        "GA_PROPERTY_ID não configurado."
+        "GA_PROPERTY_ID não configurado.",
       );
     }
 
@@ -246,14 +385,20 @@ export async function GET(
     ===================================================== */
 
     const inicio =
-      request.nextUrl.searchParams.get(
-        "inicio"
-      ) || "30daysAgo";
+      request.nextUrl
+        .searchParams
+        .get(
+          "inicio",
+        ) ||
+      "30daysAgo";
 
     const fim =
-      request.nextUrl.searchParams.get(
-        "fim"
-      ) || "today";
+      request.nextUrl
+        .searchParams
+        .get(
+          "fim",
+        ) ||
+      "today";
 
     const dateRanges = [
       {
@@ -305,6 +450,9 @@ export async function GET(
 
         /* =================================================
            DE ONDE VIERAM
+
+           sessionSource recebe, por exemplo:
+           utm_source=meetalfred
         ================================================= */
 
         analytics.runReport({
@@ -350,10 +498,16 @@ export async function GET(
         /* =================================================
            CANAIS
 
-           Agora traz:
+           Traz:
            - canal
            - origem
            - mídia
+
+           Exemplo da campanha:
+
+           source = meetalfred
+           medium = email
+           canal  = Email
         ================================================= */
 
         analytics.runReport({
@@ -499,21 +653,21 @@ export async function GET(
       numero(
         resumoRow
           ?.metricValues?.[0]
-          ?.value
+          ?.value,
       );
 
     const sessoes =
       numero(
         resumoRow
           ?.metricValues?.[1]
-          ?.value
+          ?.value,
       );
 
     const visualizacoes =
       numero(
         resumoRow
           ?.metricValues?.[2]
-          ?.value
+          ?.value,
       );
 
     /* =====================================================
@@ -527,45 +681,49 @@ export async function GET(
           .rows ??
         []
       ).map(
-        (row) => ({
+        (
+          row,
+        ) => ({
           origem:
             normalizarOrigem(
               row
                 .dimensionValues?.[0]
                 ?.value ??
-                "Outros"
+                "Outros",
             ),
 
           visitantes:
             numero(
               row
                 .metricValues?.[0]
-                ?.value
+                ?.value,
             ),
 
           sessoes:
             numero(
               row
                 .metricValues?.[1]
-                ?.value
+                ?.value,
             ),
-        })
+        }),
       );
 
     const origens =
       agruparOrigens(
-        origensBrutas
+        origensBrutas,
       )
         .sort(
           (
             a,
-            b
+            b,
           ) =>
             b.sessoes -
-            a.sessoes
+            a.sessoes,
         )
         .map(
-          (item) => ({
+          (
+            item,
+          ) => ({
             ...item,
 
             percentual:
@@ -573,24 +731,29 @@ export async function GET(
               0
                 ? Number(
                     (
-                      (item.sessoes /
-                        sessoes) *
+                      (
+                        item.sessoes /
+                        sessoes
+                      ) *
                       100
                     ).toFixed(
-                      1
-                    )
+                      1,
+                    ),
                   )
                 : 0,
-          })
+          }),
         );
 
     /* =====================================================
        CANAIS
 
-       Retorna também:
-       origem
-       mídia
-       origemMidia
+       Retorna:
+       - canal
+       - origem
+       - origemOriginal
+       - midia
+       - origemMidia
+       - sessoes
     ===================================================== */
 
     const canais =
@@ -599,8 +762,10 @@ export async function GET(
           .rows ??
         []
       ).map(
-        (row) => {
-          const canal =
+        (
+          row,
+        ) => {
+          const canalOriginal =
             row
               .dimensionValues?.[0]
               ?.value ??
@@ -620,7 +785,20 @@ export async function GET(
 
           const origem =
             normalizarOrigem(
-              origemOriginal
+              origemOriginal,
+            );
+
+          /*
+           * Se a UTM for:
+           *
+           * utm_medium=email
+           *
+           * garantimos que o canal seja Email.
+           */
+          const canal =
+            normalizarCanal(
+              canalOriginal,
+              midia,
             );
 
           return {
@@ -639,10 +817,10 @@ export async function GET(
               numero(
                 row
                   .metricValues?.[0]
-                  ?.value
+                  ?.value,
               ),
           };
-        }
+        },
       );
 
     /* =====================================================
@@ -656,7 +834,9 @@ export async function GET(
         []
       )
         .map(
-          (row) => ({
+          (
+            row,
+          ) => ({
             pagina:
               row
                 .dimensionValues?.[0]
@@ -667,14 +847,16 @@ export async function GET(
               numero(
                 row
                   .metricValues?.[0]
-                  ?.value
+                  ?.value,
               ),
-          })
+          }),
         )
         .filter(
-          (item) =>
+          (
+            item,
+          ) =>
             item.pagina !==
-            "(not set)"
+            "(not set)",
         );
 
     /* =====================================================
@@ -698,25 +880,25 @@ export async function GET(
           row
             .dimensionValues?.[0]
             ?.value ??
-            "Outros"
+            "Outros",
         );
 
       const views =
         numero(
           row
             .metricValues?.[0]
-            ?.value
+            ?.value,
         );
 
       cursosMapa.set(
         origem,
         (
           cursosMapa.get(
-            origem
+            origem,
           ) ??
           0
         ) +
-          views
+          views,
       );
     }
 
@@ -726,7 +908,9 @@ export async function GET(
 
     const desempenhoPorOrigem =
       origens.map(
-        (item) => ({
+        (
+          item,
+        ) => ({
           origem:
             item.origem,
 
@@ -735,10 +919,10 @@ export async function GET(
 
           cursosVistos:
             cursosMapa.get(
-              item.origem
+              item.origem,
             ) ??
             0,
-        })
+        }),
       );
 
     /* =====================================================
@@ -770,7 +954,7 @@ export async function GET(
   ) {
     console.error(
       "Erro Google Analytics:",
-      error
+      error,
     );
 
     return NextResponse.json(
@@ -784,7 +968,7 @@ export async function GET(
       {
         status:
           500,
-      }
+      },
     );
   }
 }

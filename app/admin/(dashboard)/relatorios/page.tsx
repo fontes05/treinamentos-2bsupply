@@ -181,6 +181,27 @@ function formatarOrigemResumoGA4(
       ?.trim()
       .toLowerCase();
 
+  /* =====================================================
+     ORIGENS PERSONALIZADAS
+  ===================================================== */
+
+  if (
+    valor === "meetalfred" ||
+    valor === "meet alfred"
+  ) {
+    return {
+      nome:
+        "Meet Alfred",
+
+      descricao:
+        "Campanha de e-mail",
+    };
+  }
+
+  /* =====================================================
+     ORIGEM NÃO IDENTIFICADA
+  ===================================================== */
+
   if (
     valor ===
       "não identificado" ||
@@ -197,6 +218,10 @@ function formatarOrigemResumoGA4(
         "O GA4 não conseguiu determinar a origem",
     };
   }
+
+  /* =====================================================
+     DADOS INDISPONÍVEIS
+  ===================================================== */
 
   if (
     valor ===
@@ -324,9 +349,26 @@ function formatarOrigemGA4(
   }
 
   const normalizada =
-    origem.toLowerCase();
+    origem
+      .trim()
+      .toLowerCase();
 
-  /* REDES SOCIAIS */
+  /* =====================================================
+     EMAIL MARKETING
+  ===================================================== */
+
+  if (
+    normalizada ===
+      "meetalfred" ||
+    normalizada ===
+      "meet alfred"
+  ) {
+    return "Meet Alfred";
+  }
+
+  /* =====================================================
+     REDES SOCIAIS
+  ===================================================== */
 
   if (
     normalizada.includes(
@@ -380,7 +422,6 @@ function formatarOrigemGA4(
 
   return origem;
 }
-
 
 /* =========================================================
    DATAS
