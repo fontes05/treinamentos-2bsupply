@@ -598,6 +598,13 @@ export default function RentabilidadePage() {
 
   const [referencia, setReferencia] = useState(() => new Date());
   const [sincronizando, setSincronizando] = useState(false);
+  const [sincronizandoDas, setSincronizandoDas] = useState(false);
+  const [competenciaDas, setCompetenciaDas] = useState(() => {
+    const previous = new Date();
+    previous.setDate(1);
+    previous.setMonth(previous.getMonth() - 1);
+    return `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, "0")}`;
+  });
   const [dataInicial, setDataInicial] = useState(() => dataHoje());
   const [dataFinal, setDataFinal] = useState(() => dataHoje());
 
@@ -883,6 +890,35 @@ export default function RentabilidadePage() {
       setErro(error instanceof Error ? error.message : "Erro ao sincronizar a Hotmart.");
     } finally {
       setSincronizando(false);
+    }
+  }
+
+  async function sincronizarDas() {
+    try {
+      setSincronizandoDas(true);
+      setErro("");
+      setSucesso("");
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Sua sessão expirou. Faça login novamente.");
+
+      const response = await fetch("/api/admin/das/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ competencia: competenciaDas }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Erro ao sincronizar o DAS.");
+      if (await carregar()) {
+        setSucesso(`DAS de ${competenciaDas.slice(5)}/${competenciaDas.slice(0, 4)} sincronizado: ${Number(result.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.`);
+      }
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Erro ao sincronizar o DAS.");
+    } finally {
+      setSincronizandoDas(false);
     }
   }
 
@@ -1957,6 +1993,26 @@ export default function RentabilidadePage() {
           >
             <RefreshCw size={16} className={sincronizando ? "animate-spin" : ""} />
             {sincronizando ? "Sincronizando..." : "Sincronizar Hotmart"}
+          </button>
+
+          <label className="flex items-center gap-2 text-sm text-zinc-600">
+            Competência DAS
+            <input
+              type="month"
+              value={competenciaDas}
+              onChange={(event) => setCompetenciaDas(event.target.value)}
+              className="h-9 rounded-lg border border-zinc-200 bg-white px-2 text-zinc-800"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => void sincronizarDas()}
+            disabled={sincronizandoDas || !competenciaDas}
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 text-sm font-medium text-sky-700 transition hover:bg-sky-100 disabled:opacity-50"
+            title="Consultar o DAS apurado pelo Integra Contador"
+          >
+            <RefreshCw size={16} className={sincronizandoDas ? "animate-spin" : ""} />
+            {sincronizandoDas ? "Sincronizando DAS..." : "Sincronizar DAS"}
           </button>
 
           <button
