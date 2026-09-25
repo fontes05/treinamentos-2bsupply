@@ -25,7 +25,7 @@ import {
   X,
 } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/client";
+import { createBrowserClient } from "@supabase/ssr";
 
 /* =========================================================
    TIPOS
@@ -41,9 +41,12 @@ type Recorrencia =
   | "anual";
 
 type Periodo =
+  | 1
   | 7
   | 30
-  | 90;
+  | 90
+  | "ontem"
+  | "personalizado";
 
 type Custo = {
   id: string;
@@ -149,38 +152,22 @@ type FormReceita = {
    HELPERS
 ========================================================= */
 
-function dataHoje() {
-  const agora =
-    new Date();
-
-  const year =
-    agora.getFullYear();
-
-  const month =
-    String(
-      agora.getMonth() + 1
-    ).padStart(
-      2,
-      "0"
-    );
-
-  const day =
-    String(
-      agora.getDate()
-    ).padStart(
-      2,
-      "0"
-    );
-
-  return `${year}-${month}-${day}`;
+// Os períodos financeiros seguem a data civil de São Paulo,
+// independentemente do fuso horário configurado no navegador.
+function dataHoje(referencia = new Date()) {
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(referencia);
+  const parte = (tipo: string) =>
+    partes.find((item) => item.type === tipo)?.value ?? "";
+  return `${parte("year")}-${parte("month")}-${parte("day")}`;
 }
 
-function stringParaData(
-  value: string
-) {
-  return new Date(
-    `${value}T12:00:00`
-  );
+function stringParaData(value: string) {
+  return new Date(`${value}T12:00:00-03:00`);
 }
 
 function formatarMoeda(
@@ -265,36 +252,32 @@ function normalizarNumero(
 }
 
 function getPeriodo(
-  dias: number
+  periodo: Periodo,
+  referencia: Date,
+  dataInicial: string,
+  dataFinal: string
 ) {
-  const fim =
-    new Date();
+  const hoje = dataHoje(referencia);
+  let primeiroDia: string;
+  let ultimoDia: string;
 
-  fim.setHours(
-    23,
-    59,
-    59,
-    999
-  );
+  if (periodo === "personalizado") {
+    primeiroDia = dataInicial;
+    ultimoDia = dataFinal;
+  } else {
+    const inicioCalendario = new Date(`${hoje}T12:00:00Z`);
+    inicioCalendario.setUTCDate(
+      inicioCalendario.getUTCDate() -
+        (periodo === "ontem" ? 1 : periodo - 1)
+    );
+    primeiroDia = inicioCalendario.toISOString().slice(0, 10);
+    ultimoDia = periodo === "ontem" ? primeiroDia : hoje;
+  }
 
-  const inicio =
-    new Date(fim);
-
-  inicio.setDate(
-    inicio.getDate() -
-      (dias - 1)
-  );
-
-  inicio.setHours(
-    0,
-    0,
-    0,
-    0
-  );
-
+  // O intervalo inclui os dias completos em America/Sao_Paulo.
   return {
-    inicio,
-    fim,
+    inicio: new Date(`${primeiroDia}T00:00:00-03:00`),
+    fim: new Date(`${ultimoDia}T23:59:59.999-03:00`),
   };
 }
 
@@ -549,7 +532,11 @@ export default function RentabilidadePage() {
   const supabase =
     useMemo(
       () =>
-        createClient(),
+        createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!
+        ),
       []
     );
 
@@ -608,6 +595,11 @@ export default function RentabilidadePage() {
     useState<Periodo>(
       30
     );
+
+  const [referencia, setReferencia] = useState(() => new Date());
+  const [sincronizando, setSincronizando] = useState(false);
+  const [dataInicial, setDataInicial] = useState(() => dataHoje());
+  const [dataFinal, setDataFinal] = useState(() => dataHoje());
 
   const [
     busca,
@@ -673,6 +665,7 @@ export default function RentabilidadePage() {
         try {
           setLoading(true);
           setErro("");
+          setReferencia(new Date());
 
           const {
             data: userData,
@@ -766,6 +759,8 @@ export default function RentabilidadePage() {
                   {
                     ascending:
                       false,
+                    nullsFirst:
+                      false,
                   }
                 ),
             ]);
@@ -818,6 +813,7 @@ export default function RentabilidadePage() {
               []
             ) as HotmartVenda[]
           );
+          return true;
         } catch (error) {
           console.error(
             "Erro ao carregar rentabilidade:",
@@ -834,6 +830,7 @@ export default function RentabilidadePage() {
           setCustos([]);
           setReceitas([]);
           setVendasHotmart([]);
+          return false;
         } finally {
           setLoading(false);
         }
@@ -852,6 +849,43 @@ export default function RentabilidadePage() {
     ]
   );
 
+  // O endpoint deve autenticar e autorizar administradores no servidor.
+  async function sincronizarHotmart() {
+    try {
+      setSincronizando(true);
+      setErro("");
+      setSucesso("");
+
+      const resposta = await fetch("/api/hotmart/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ days: 30 }),
+      });
+      const texto = await resposta.text();
+      let resultado: Record<string, unknown> = {};
+      try {
+        resultado = JSON.parse(texto) as Record<string, unknown>;
+      } catch {
+        // Erros de proxy podem responder em HTML.
+      }
+      if (!resposta.ok || resultado.error) {
+        throw new Error(
+          String(resultado.error || resultado.message ||
+            `Não foi possível sincronizar a Hotmart (HTTP ${resposta.status}).`)
+        );
+      }
+
+      const recarregou = await carregar();
+      if (recarregou) {
+        setSucesso("Sincronização concluída. Os dados da Hotmart foram atualizados.");
+      }
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Erro ao sincronizar a Hotmart.");
+    } finally {
+      setSincronizando(false);
+    }
+  }
+
   /* =======================================================
      PERÍODO
   ======================================================= */
@@ -860,12 +894,27 @@ export default function RentabilidadePage() {
     useMemo(
       () =>
         getPeriodo(
-          periodo
+          periodo,
+          referencia,
+          dataInicial,
+          dataFinal
         ),
       [
         periodo,
+        referencia,
+        dataInicial,
+        dataFinal,
       ]
     );
+
+  const legendaPeriodo =
+    periodo === 1
+      ? "hoje"
+      : periodo === "ontem"
+        ? "ontem"
+        : periodo === "personalizado"
+          ? `${formatarData(dataInicial)} a ${formatarData(dataFinal)}`
+          : `últimos ${periodo} dias`;
 
   /* =======================================================
      VENDAS HOTMART DO PERÍODO
@@ -885,7 +934,7 @@ export default function RentabilidadePage() {
             venda
           ) => {
             if (
-              !venda.approved_date
+              !venda.approved_date && !venda.order_date
             ) {
               return false;
             }
@@ -900,7 +949,7 @@ export default function RentabilidadePage() {
 
             const data =
               new Date(
-                venda.approved_date
+                venda.approved_date ?? venda.order_date!
               );
 
             return dentroDoPeriodo(
@@ -1746,7 +1795,7 @@ export default function RentabilidadePage() {
             venda.payment_method ??
             "",
 
-            venda.approved_date ??
+            venda.approved_date ?? venda.order_date ??
             "",
           ]
         );
@@ -1765,7 +1814,7 @@ export default function RentabilidadePage() {
         ],
         ...linhas,
       ],
-      `vendas-hotmart-${periodo}-dias-${dataHoje()}.csv`
+      `vendas-hotmart-${periodo === "personalizado" ? `${dataInicial}-a-${dataFinal}` : periodo === "ontem" ? "ontem" : periodo === 1 ? "hoje" : `${periodo}-dias`}-${dataHoje()}.csv`
     );
   }
 
@@ -1837,6 +1886,20 @@ export default function RentabilidadePage() {
         <div className="flex flex-wrap items-center gap-2">
 
           <PeriodoButton
+            ativo={periodo === 1}
+            onClick={() => setPeriodo(1)}
+          >
+            Hoje
+          </PeriodoButton>
+
+          <PeriodoButton
+            ativo={periodo === "ontem"}
+            onClick={() => setPeriodo("ontem")}
+          >
+            Ontem
+          </PeriodoButton>
+
+          <PeriodoButton
             ativo={
               periodo ===
               7
@@ -1878,6 +1941,24 @@ export default function RentabilidadePage() {
             90 dias
           </PeriodoButton>
 
+          <PeriodoButton
+            ativo={periodo === "personalizado"}
+            onClick={() => setPeriodo("personalizado")}
+          >
+            Personalizado
+          </PeriodoButton>
+
+          <button
+            type="button"
+            onClick={() => void sincronizarHotmart()}
+            disabled={sincronizando}
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
+            title="Buscar vendas recentes na Hotmart"
+          >
+            <RefreshCw size={16} className={sincronizando ? "animate-spin" : ""} />
+            {sincronizando ? "Sincronizando..." : "Sincronizar Hotmart"}
+          </button>
+
           <button
             type="button"
             onClick={() =>
@@ -1893,6 +1974,44 @@ export default function RentabilidadePage() {
 
         </div>
       </div>
+
+      {periodo === "personalizado" && (
+        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3">
+          <label className="text-sm font-medium text-zinc-700">
+            Data inicial
+            <input
+              type="date"
+              value={dataInicial}
+              max={dataHoje(referencia)}
+              onChange={(event) => {
+                const valor = event.target.value;
+                if (!valor) return;
+                setDataInicial(valor);
+                if (valor > dataFinal) setDataFinal(valor);
+              }}
+              className="mt-1 block h-9 rounded-lg border border-zinc-200 px-3 text-sm"
+            />
+          </label>
+          <label className="text-sm font-medium text-zinc-700">
+            Data final
+            <input
+              type="date"
+              value={dataFinal}
+              max={dataHoje(referencia)}
+              onChange={(event) => {
+                const valor = event.target.value;
+                if (!valor) return;
+                setDataFinal(valor);
+                if (valor < dataInicial) setDataInicial(valor);
+              }}
+              className="mt-1 block h-9 rounded-lg border border-zinc-200 px-3 text-sm"
+            />
+          </label>
+          <span className="pb-2 text-xs text-zinc-500">
+            Valores atualizados ao escolher as datas.
+          </span>
+        </div>
+      )}
 
       {erro && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -2045,7 +2164,7 @@ export default function RentabilidadePage() {
             </div>
 
             <p className="mt-1 text-sm text-zinc-500">
-              Valores calculados pelas vendas aprovadas e concluídas nos últimos {periodo} dias.
+              Valores calculados pelas vendas aprovadas e concluídas: {legendaPeriodo}.
             </p>
           </div>
 
@@ -2074,7 +2193,7 @@ export default function RentabilidadePage() {
                 metricas.vendasHotmart
               )
             }
-            descricao={`últimos ${periodo} dias`}
+            descricao={legendaPeriodo}
             icon={
               <ShoppingCart
                 size={20}
@@ -2206,7 +2325,7 @@ export default function RentabilidadePage() {
 
                       <Td>
                         {formatarDataHora(
-                          venda.approved_date
+                          venda.approved_date ?? venda.order_date
                         )}
                       </Td>
 
