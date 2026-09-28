@@ -70,6 +70,13 @@ export default function SiteFooter() {
               className="footer-certification-image"
             />
             <Image
+              src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/selo-iso-27701-2.png"
+              alt="ISO/IEC 27701"
+              width={100}
+              height={100}
+              className="footer-certification-image"
+            />
+            <Image
               src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/selo-iso-9001.png"
               alt="ISO 9001"
               width={100}
