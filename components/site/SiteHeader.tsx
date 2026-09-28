@@ -105,6 +105,19 @@ export default function SiteHeader() {
           <Link href="/#depoimentos">
             Depoimentos
           </Link>
+
+           <Link
+            href="/certificacoes"
+            className={
+              pathname.startsWith(
+                "/certificacoes",
+              )
+                ? "active"
+                : ""
+            }
+          >
+           Certificações
+          </Link>
         </nav>
 
 

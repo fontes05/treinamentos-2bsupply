@@ -3252,7 +3252,7 @@ flex-direction: column;
 }
 
 
-.training-section-heading h2 {
+.training-section-heading h2,.cert-lista-titulo h2 {
   margin: 0;
   font-weight:700;
   font-size: 28px;
