@@ -437,6 +437,49 @@ export async function POST(request: NextRequest) {
     const endDate = Date.now();
     const startDate = endDate - days * DAY_MS;
 
+    if (body?.diagnostic === true) {
+  async function testar(
+    options: Parameters<typeof getHotmartSales>[0],
+  ) {
+    try {
+      const data = await getHotmartSales(options);
+
+      return {
+        ok: true,
+        quantidade: data.items?.length ?? 0,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Erro desconhecido",
+      };
+    }
+  }
+
+  const semDatas = await testar({
+    maxResults: 50,
+  });
+
+  const comDatas = await testar({
+    startDate,
+    endDate,
+    maxResults: 50,
+  });
+
+  return NextResponse.json({
+    diagnostic: true,
+    periodo: {
+      start: new Date(startDate).toISOString(),
+      end: new Date(endDate).toISOString(),
+    },
+    semDatas,
+    comDatas,
+  });
+}
+
     let totalReceived = 0;
     let totalSaved = 0;
     let totalChunks = 0;
