@@ -302,4 +302,5 @@ export async function getHotmartSales(
   }
 
   return JSON.parse(text) as HotmartSalesResponse;
+  
 }
