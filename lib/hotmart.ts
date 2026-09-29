@@ -12,31 +12,17 @@ function clean(value: string | undefined) {
 }
 
 function getCredentials() {
-  const clientId = clean(
-    process.env.HOTMART_CLIENT_ID,
-  );
-
-  const clientSecret = clean(
-    process.env.HOTMART_CLIENT_SECRET,
-  );
+  const clientId = clean(process.env.HOTMART_CLIENT_ID);
+  const clientSecret = clean(process.env.HOTMART_CLIENT_SECRET);
 
   if (!clientId) {
-    throw new Error(
-      "HOTMART_CLIENT_ID não configurado.",
-    );
+    throw new Error("HOTMART_CLIENT_ID não configurado.");
   }
 
   if (!clientSecret) {
-    throw new Error(
-      "HOTMART_CLIENT_SECRET não configurado.",
-    );
+    throw new Error("HOTMART_CLIENT_SECRET não configurado.");
   }
 
-  // Gera o Basic automaticamente:
-  //
-  // Base64(
-  //   CLIENT_ID:CLIENT_SECRET
-  // )
   const basicToken = Buffer.from(
     `${clientId}:${clientSecret}`,
     "utf8",
@@ -50,62 +36,45 @@ function getCredentials() {
 }
 
 export async function getHotmartAccessToken() {
-  const {
-    clientId,
-    clientSecret,
-    authorization,
-  } = getCredentials();
+  const { clientId, clientSecret, authorization } = getCredentials();
 
   const url = new URL(
     "https://api-sec-vlc.hotmart.com/security/oauth/token",
   );
 
-  url.searchParams.set(
-    "grant_type",
-    "client_credentials",
-  );
+  url.searchParams.set("grant_type", "client_credentials");
+  url.searchParams.set("client_id", clientId);
+  url.searchParams.set("client_secret", clientSecret);
 
-  url.searchParams.set(
-    "client_id",
-    clientId,
-  );
-
-  url.searchParams.set(
-    "client_secret",
-    clientSecret,
-  );
-
-  const response = await fetch(
-    url.toString(),
-    {
-      method: "POST",
-
-      headers: {
-        Authorization: authorization,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-
-      cache: "no-store",
+  const response = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      Authorization: authorization,
+      Accept: "application/json",
+      "Content-Type": "application/json",
     },
-  );
+    cache: "no-store",
+  });
 
-  const text =
-    await response.text();
+  const text = await response.text();
 
   if (!response.ok) {
-    let hotmartMessage =
-      `HTTP ${response.status}`;
+    let hotmartMessage = `HTTP ${response.status}`;
 
     try {
-      const data =
-        JSON.parse(text);
+      const data = JSON.parse(text);
 
-      hotmartMessage =
+      const description =
         data.error_description ||
         data.message ||
-        data.error ||
-        hotmartMessage;
+        data.error;
+
+      if (description) {
+        hotmartMessage =
+          typeof description === "string"
+            ? description
+            : JSON.stringify(description);
+      }
     } catch {
       if (text) {
         hotmartMessage = text;
@@ -123,10 +92,7 @@ export async function getHotmartAccessToken() {
     );
   }
 
-  const data =
-    JSON.parse(
-      text,
-    ) as HotmartTokenResponse;
+  const data = JSON.parse(text) as HotmartTokenResponse;
 
   if (!data.access_token) {
     throw new Error(
@@ -162,12 +128,9 @@ export type HotmartSale = {
     transaction?: string;
     order_date?: number;
     approved_date?: number;
-
     status?: string;
-
     recurrency_number?: number;
     is_subscription?: boolean;
-
     commission_as?: string;
 
     price?: {
@@ -213,105 +176,130 @@ export type HotmartSalesResponse = {
   };
 };
 
+type HotmartSalesOptions = {
+  startDate?: number;
+  endDate?: number;
+  maxResults?: number;
+  pageToken?: string;
+};
+
 /* =========================================================
    BUSCAR VENDAS
 ========================================================= */
 
 export async function getHotmartSales(
-  options?: {
-    startDate?: number;
-    endDate?: number;
-    maxResults?: number;
-    pageToken?: string;
-  }
+  options?: HotmartSalesOptions,
 ): Promise<HotmartSalesResponse> {
-  const tokenData =
-    await getHotmartAccessToken();
+  const startDate = options?.startDate;
+  const endDate = options?.endDate;
+  const maxResults = options?.maxResults ?? 50;
+
+  if (
+    startDate !== undefined &&
+    (!Number.isSafeInteger(startDate) || startDate < 0)
+  ) {
+    throw new Error(
+      "Data inicial inválida: informe um timestamp em milissegundos.",
+    );
+  }
+
+  if (
+    endDate !== undefined &&
+    (!Number.isSafeInteger(endDate) || endDate < 0)
+  ) {
+    throw new Error(
+      "Data final inválida: informe um timestamp em milissegundos.",
+    );
+  }
+
+  if (
+    startDate !== undefined &&
+    endDate !== undefined &&
+    startDate >= endDate
+  ) {
+    throw new Error(
+      "O início da consulta Hotmart precisa ser anterior ao fim.",
+    );
+  }
+
+  if (!Number.isSafeInteger(maxResults) || maxResults < 1) {
+    throw new Error(
+      "maxResults precisa ser um número inteiro positivo.",
+    );
+  }
+
+  const tokenData = await getHotmartAccessToken();
 
   const url = new URL(
-    "https://developers.hotmart.com/payments/api/v1/sales/history"
+    "https://developers.hotmart.com/payments/api/v1/sales/history",
   );
 
-  url.searchParams.set(
-    "max_results",
-    String(
-      options?.maxResults ??
-      50
-    )
-  );
+  url.searchParams.set("max_results", String(maxResults));
 
-  if (options?.startDate) {
-    url.searchParams.set(
-      "start_date",
-      String(options.startDate)
-    );
+  if (startDate !== undefined) {
+    url.searchParams.set("start_date", String(startDate));
   }
 
-  if (options?.endDate) {
-    url.searchParams.set(
-      "end_date",
-      String(options.endDate)
-    );
+  if (endDate !== undefined) {
+    url.searchParams.set("end_date", String(endDate));
   }
 
   if (options?.pageToken) {
-    url.searchParams.set(
-      "page_token",
-      options.pageToken
-    );
+    url.searchParams.set("page_token", options.pageToken);
   }
 
-  const response =
-    await fetch(
-      url.toString(),
-      {
-        method: "GET",
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${tokenData.access_token}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    cache: "no-store",
+  });
 
-        headers: {
-          Authorization:
-            `Bearer ${tokenData.access_token}`,
-
-          Accept:
-            "application/json",
-
-          "Content-Type":
-            "application/json",
-        },
-
-        cache:
-          "no-store",
-      }
-    );
-
-  const text =
-    await response.text();
+  const text = await response.text();
 
   if (!response.ok) {
-    let message =
-      `HTTP ${response.status}`;
+    let message = `HTTP ${response.status}`;
+    let details: unknown = null;
 
     try {
-      const json =
-        JSON.parse(text);
+      const json = JSON.parse(text);
 
-      message =
+      const description =
         json.error_description ||
         json.message ||
-        json.error ||
-        message;
-    } catch {
-      if (text) {
+        json.error;
+
+      if (description) {
         message =
-          text;
+          typeof description === "string"
+            ? description
+            : JSON.stringify(description);
       }
+
+      details =
+        json.details ??
+        json.errors ??
+        json;
+    } catch {
+      message = text || message;
     }
 
+    console.error("Hotmart Sales: consulta recusada", {
+      status: response.status,
+      startDate,
+      endDate,
+      maxResults,
+      hasPageToken: Boolean(options?.pageToken),
+      details,
+    });
+
     throw new Error(
-      `Hotmart Sales ${response.status}: ${message}`
+      `Hotmart Sales ${response.status}: ${message}`,
     );
   }
 
-  return JSON.parse(
-    text
-  ) as HotmartSalesResponse;
+  return JSON.parse(text) as HotmartSalesResponse;
 }
