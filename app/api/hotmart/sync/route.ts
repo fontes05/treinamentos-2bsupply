@@ -7,7 +7,7 @@ import {
 } from "@/lib/hotmart";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-
+import { createHash } from "node:crypto";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -477,9 +477,20 @@ export async function POST(request: NextRequest) {
     maxResults: 1,
   });
 
+const credencialFingerprint = createHash("sha256")
+  .update(
+    JSON.stringify([
+      process.env.HOTMART_CLIENT_ID?.trim() ?? "",
+      process.env.HOTMART_CLIENT_SECRET?.trim() ?? "",
+    ]),
+  )
+  .digest("hex")
+  .slice(0, 16);
+
   return NextResponse.json({
     diagnostic: true,
-    versao: "hotmart-diagnostico-v2",
+  versao: "hotmart-diagnostico-v3",
+  credencialFingerprint,
     ambiente: process.env.VERCEL ? "vercel" : "local",
     commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
     periodo: {
