@@ -459,23 +459,36 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const semDatas = await testar({
+  const semParametros = await testar({
+    omitMaxResults: true,
+  });
+
+  const limite1 = await testar({
+    maxResults: 1,
+  });
+
+  const limite50 = await testar({
     maxResults: 50,
   });
 
   const comDatas = await testar({
     startDate,
     endDate,
-    maxResults: 50,
+    maxResults: 1,
   });
 
   return NextResponse.json({
     diagnostic: true,
+    versao: "hotmart-diagnostico-v2",
+    ambiente: process.env.VERCEL ? "vercel" : "local",
+    commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
     periodo: {
       start: new Date(startDate).toISOString(),
       end: new Date(endDate).toISOString(),
     },
-    semDatas,
+    semParametros,
+    limite1,
+    limite50,
     comDatas,
   });
 }

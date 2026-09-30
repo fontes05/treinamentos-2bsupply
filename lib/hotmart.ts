@@ -181,6 +181,7 @@ type HotmartSalesOptions = {
   endDate?: number;
   maxResults?: number;
   pageToken?: string;
+  omitMaxResults?: boolean;
 };
 
 /* =========================================================
@@ -234,7 +235,9 @@ export async function getHotmartSales(
     "https://developers.hotmart.com/payments/api/v1/sales/history",
   );
 
+  if (!options?.omitMaxResults) {
   url.searchParams.set("max_results", String(maxResults));
+}
 
   if (startDate !== undefined) {
     url.searchParams.set("start_date", String(startDate));
