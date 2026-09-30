@@ -1911,7 +1911,7 @@ export default function RentabilidadePage() {
           </div>
 
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-zinc-950 lg:text-3xl">
-            Custos e Rentabilidade
+            Custos e Rentabilidade 2
           </h2>
 
           <p className="mt-2 text-sm text-zinc-500">

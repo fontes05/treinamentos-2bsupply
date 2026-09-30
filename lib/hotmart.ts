@@ -1,4 +1,5 @@
 import "server-only";
+import { get as httpsGet } from "node:https";
 
 type HotmartTokenResponse = {
   access_token: string;
