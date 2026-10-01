@@ -68,10 +68,10 @@ export default function SiteFooter() {
           className="footer-certifications"
           aria-label="Conheça as certificações da 2BSUPPLY"
         >
-          <span className="footer-certifications-title">Certificações</span>
+          <span className="footer-certifications-title">Empresa Certificada ISO</span>
           <span className="footer-certifications-logos">
             <Image
-              src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/selo-iso-42001-2.png"
+              src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/selo-iso-42001-2 (2).png"
               alt="ISO/IEC 42001"
               width={100}
               height={100}
@@ -85,14 +85,14 @@ export default function SiteFooter() {
               className="footer-certification-image"
             />
             <Image
-              src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/selo-iso-27701-2.png"
+              src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/selo-iso-27701-2 (1).png"
               alt="ISO/IEC 27701"
               width={100}
               height={100}
               className="footer-certification-image"
             />
             <Image
-              src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/selo-iso-9001.png"
+              src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/selo-iso-9001 (1).png"
               alt="ISO 9001"
               width={100}
               height={100}
