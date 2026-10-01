@@ -7,7 +7,11 @@ export default function SiteFooter() {
       <div className="container footer-grid">
         <div className="footer-brand">
           <div className="footer-brand-logos">
-            <Link href="/" className="logo footer-logo" aria-label="Página inicial da Academia Brasileira de Suprimentos">
+            <Link
+              href="/"
+              className="logo footer-logo"
+              aria-label="Página inicial da Academia Brasileira de Suprimentos"
+            >
               <Image
                 src="/logo-academia-brasileira-de-suprimentos-1.png"
                 alt="Academia Brasileira de Suprimentos"
@@ -46,6 +50,17 @@ export default function SiteFooter() {
             Conhecimento, tecnologia e estratégia para
             transformar a área de Compras e Suprimentos.
           </p>
+
+          <p
+  className="footer-cnpj"
+  style={{
+    marginTop: "20px",
+    fontSize: "14px",
+    opacity: 0.75,
+  }}
+>
+  CNPJ: 36.335.299/0001-82
+</p>
         </div>
 
         <Link
@@ -88,9 +103,13 @@ export default function SiteFooter() {
       </div>
 
       <div className="container footer-bottom">
-        <span>
-          © {new Date().getFullYear()} 2BSUPPLY. Todos os direitos reservados.
-        </span>
+        <div>
+          <span>
+            © {new Date().getFullYear()} 2BSUPPLY. Todos os direitos reservados.
+          </span>
+
+        </div>
+
         <span>Conhecimento de Supply que transforma.</span>
       </div>
     </footer>
