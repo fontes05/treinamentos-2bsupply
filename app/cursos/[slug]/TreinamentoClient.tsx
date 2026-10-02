@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  type MouseEvent,
-  useEffect,
-  useState,
-} from "react";
+import { type MouseEvent, useEffect, useState } from "react";
 
 import {
   Dialog,
@@ -14,11 +10,9 @@ import {
 } from "@/components/ui/dialog";
 
 import Link from "next/link";
+import DOMPurify from "dompurify";
 
-import {
-  useParams,
-  useRouter,
-} from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import {
   ArrowLeft,
@@ -43,13 +37,9 @@ import {
   Video,
 } from "lucide-react";
 
-import {
-  createClient,
-} from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
-import {
-  registrarEventoTreinamento,
-} from "@/lib/training-analytics";
+import { registrarEventoTreinamento } from "@/lib/training-analytics";
 
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
@@ -63,45 +53,25 @@ type Curso = {
   titulo: string;
   slug: string;
 
-  categoria_id:
-    | number
-    | null;
+  categoria_id: number | null;
 
-  descricao:
-    | string
-    | null;
+  descricao: string | null;
 
-  publico_alvo:
-    | string
-    | null;
+  publico_alvo: string | null;
 
-  porque_aprender:
-    | string
-    | null;
+  porque_aprender: string | null;
 
-  imagem_url:
-    | string
-    | null;
+  imagem_url: string | null;
 
-  video_introdutorio_url:
-    | string
-    | null;
+  video_introdutorio_url: string | null;
 
-  preco_de:
-    | number
-    | null;
+  preco_de: number | null;
 
-  preco_para:
-    | number
-    | null;
+  preco_para: number | null;
 
-  parcelamento:
-    | string
-    | null;
+  parcelamento: string | null;
 
-  link_inscricao:
-    | string
-    | null;
+  link_inscricao: string | null;
 };
 
 type Categoria = {
@@ -113,18 +83,14 @@ type Categoria = {
 type Modulo = {
   id: string;
   titulo: string;
-  descricao:
-    | string
-    | null;
+  descricao: string | null;
   ordem: number;
 };
 
 type Beneficio = {
   id: string;
   titulo: string;
-  icone:
-    | string
-    | null;
+  icone: string | null;
   ordem: number;
 };
 
@@ -132,13 +98,9 @@ type Certificado = {
   id: string;
   titulo: string;
 
-  descricao:
-    | string
-    | null;
+  descricao: string | null;
 
-  imagem_url:
-    | string
-    | null;
+  imagem_url: string | null;
 
   ordem: number;
 };
@@ -147,17 +109,11 @@ type Professor = {
   id: string;
   nome: string;
 
-  descricao:
-    | string
-    | null;
+  descricao: string | null;
 
-  cargo:
-    | string
-    | null;
+  cargo: string | null;
 
-  foto_url:
-    | string
-    | null;
+  foto_url: string | null;
 };
 
 type CursoProfessor = {
@@ -168,15 +124,11 @@ type AulaExtra = {
   id: string;
   titulo: string;
 
-  descricao:
-    | string
-    | null;
+  descricao: string | null;
 
   ordem: number;
 
-  grupo_titulo:
-    | string
-    | null;
+  grupo_titulo: string | null;
 
   grupo_ordem: number;
 };
@@ -202,50 +154,35 @@ const benefitIcons = {
   Sparkles,
 };
 
-type BenefitIconName =
-  keyof typeof benefitIcons;
+type BenefitIconName = keyof typeof benefitIcons;
 
 /* =========================================================
    VIDEO
 ========================================================= */
 
-function getEmbedUrl(
-  url: string | null,
-) {
+function getEmbedUrl(url: string | null) {
   if (!url) {
     return null;
   }
 
   try {
-    const parsed =
-      new URL(url);
+    const parsed = new URL(url);
 
     /*
      * YouTube
      */
-    if (
-      parsed.hostname.includes(
-        "youtube.com",
-      )
-    ) {
+    if (parsed.hostname.includes("youtube.com")) {
       /*
        * URL já em embed
        */
-      if (
-        parsed.pathname.startsWith(
-          "/embed/",
-        )
-      ) {
+      if (parsed.pathname.startsWith("/embed/")) {
         return url;
       }
 
       /*
        * youtube.com/watch?v=...
        */
-      const videoId =
-        parsed.searchParams.get(
-          "v",
-        );
+      const videoId = parsed.searchParams.get("v");
 
       if (videoId) {
         return `https://www.youtube.com/embed/${videoId}`;
@@ -254,15 +191,8 @@ function getEmbedUrl(
       /*
        * YouTube Shorts
        */
-      if (
-        parsed.pathname.startsWith(
-          "/shorts/",
-        )
-      ) {
-        const id =
-          parsed.pathname
-            .split("/")
-            .filter(Boolean)[1];
+      if (parsed.pathname.startsWith("/shorts/")) {
+        const id = parsed.pathname.split("/").filter(Boolean)[1];
 
         if (id) {
           return `https://www.youtube.com/embed/${id}`;
@@ -273,15 +203,8 @@ function getEmbedUrl(
     /*
      * youtu.be
      */
-    if (
-      parsed.hostname.includes(
-        "youtu.be",
-      )
-    ) {
-      const videoId =
-        parsed.pathname
-          .replace("/", "")
-          .trim();
+    if (parsed.hostname.includes("youtu.be")) {
+      const videoId = parsed.pathname.replace("/", "").trim();
 
       if (videoId) {
         return `https://www.youtube.com/embed/${videoId}`;
@@ -291,16 +214,8 @@ function getEmbedUrl(
     /*
      * Vimeo
      */
-    if (
-      parsed.hostname.includes(
-        "vimeo.com",
-      )
-    ) {
-      const id =
-        parsed.pathname
-          .split("/")
-          .filter(Boolean)
-          .pop();
+    if (parsed.hostname.includes("vimeo.com")) {
+      const id = parsed.pathname.split("/").filter(Boolean).pop();
 
       if (id) {
         return `https://player.vimeo.com/video/${id}`;
@@ -317,20 +232,15 @@ function getEmbedUrl(
    FORMATAR PREÇO
 ========================================================= */
 
-function formatarPreco(
-  valor: number | null,
-) {
+function formatarPreco(valor: number | null) {
   if (valor == null) {
     return "";
   }
 
-  return new Intl.NumberFormat(
-    "pt-BR",
-    {
-      style: "currency",
-      currency: "BRL",
-    },
-  ).format(valor);
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(valor);
 }
 
 /* =========================================================
@@ -341,115 +251,73 @@ type TreinamentoClientProps = {
   botaoCompraHtml?: string | null;
 };
 
+function ParcelamentoHtml({ html }: { html: string }) {
+  const [conteudo, setConteudo] = useState({ original: "", limpo: "" });
+
+  useEffect(() => {
+    setConteudo({
+      original: html,
+      limpo: DOMPurify.sanitize(html, {
+        ALLOWED_TAGS: ["strong", "span", "b", "em", "i", "br", "small"],
+        ALLOWED_ATTR: ["style"],
+        ALLOW_DATA_ATTR: false,
+        ALLOW_ARIA_ATTR: false,
+      }),
+    });
+  }, [html]);
+
+  if (conteudo.original !== html) return null;
+
+  return (
+    <div
+      className="training-video-installments"
+      dangerouslySetInnerHTML={{ __html: conteudo.limpo }}
+    />
+  );
+}
+
 export default function TreinamentoPage({
   botaoCompraHtml,
 }: TreinamentoClientProps) {
-  const params =
-    useParams();
+  const params = useParams();
 
-  const router =
-    useRouter();
+  const router = useRouter();
 
-  const slug =
-    params.slug as string;
+  const slug = params.slug as string;
 
   /* =======================================================
      ESTADOS
   ======================================================= */
 
-  const [
-    curso,
-    setCurso,
-  ] =
-    useState<Curso | null>(
-      null,
-    );
+  const [curso, setCurso] = useState<Curso | null>(null);
 
-  const [
-    categoria,
-    setCategoria,
-  ] =
-    useState<Categoria | null>(
-      null,
-    );
+  const [categoria, setCategoria] = useState<Categoria | null>(null);
 
-  const [
-    modulos,
-    setModulos,
-  ] =
-    useState<Modulo[]>([]);
+  const [modulos, setModulos] = useState<Modulo[]>([]);
 
-  const [
-    gruposAulasExtras,
-    setGruposAulasExtras,
-  ] =
-    useState<
-      GrupoAulaExtra[]
-    >([]);
+  const [gruposAulasExtras, setGruposAulasExtras] = useState<GrupoAulaExtra[]>(
+    [],
+  );
 
-  const [
-    beneficios,
-    setBeneficios,
-  ] =
-    useState<
-      Beneficio[]
-    >([]);
+  const [beneficios, setBeneficios] = useState<Beneficio[]>([]);
 
-  const [
-    certificados,
-    setCertificados,
-  ] =
-    useState<
-      Certificado[]
-    >([]);
+  const [certificados, setCertificados] = useState<Certificado[]>([]);
 
-  const [
-    professor,
-    setProfessor,
-  ] =
-    useState<Professor | null>(
-      null,
-    );
+  const [professor, setProfessor] = useState<Professor | null>(null);
 
-  const [
-    carregando,
-    setCarregando,
-  ] =
-    useState(true);
+  const [carregando, setCarregando] = useState(true);
 
-  const [
-    erro,
-    setErro,
-  ] =
-    useState("");
+  const [erro, setErro] = useState("");
 
-  const [
-    moduloAberto,
-    setModuloAberto,
-  ] =
-    useState<
-      string | null
-    >(null);
+  const [moduloAberto, setModuloAberto] = useState<string | null>(null);
 
-  const [
-    aulasExtrasAberto,
-    setAulasExtrasAberto,
-  ] =
-    useState(false);
+  const [aulasExtrasAberto, setAulasExtrasAberto] = useState(false);
 
-  const [
-    grupoAulaExtraAberto,
-    setGrupoAulaExtraAberto,
-  ] =
-    useState<
-      number | null
-    >(null);
+  const [grupoAulaExtraAberto, setGrupoAulaExtraAberto] = useState<
+    number | null
+  >(null);
 
-  const [
-    videoModalOpen,
-    setVideoModalOpen,
-  ] =
-    useState(false);
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
 
   /* =======================================================
      CARREGAR TREINAMENTO
@@ -465,25 +333,17 @@ export default function TreinamentoPage({
 
       setErro("");
 
-      const supabase =
-        createClient();
+      const supabase = createClient();
 
       try {
         /* ===============================================
            CURSO
         =============================================== */
 
-        const {
-          data:
-            cursoData,
-          error:
-            cursoError,
-        } =
-          await supabase
-            .from(
-              "treinamentos_cursos",
-            )
-            .select(`
+        const { data: cursoData, error: cursoError } = await supabase
+          .from("treinamentos_cursos")
+          .select(
+            `
               id,
               titulo,
               slug,
@@ -497,485 +357,251 @@ export default function TreinamentoPage({
               preco_para,
               parcelamento,
               link_inscricao
-            `)
-            .eq(
-              "slug",
-              slug,
-            )
-            .eq(
-              "status",
-              "publicado",
-            )
-            .maybeSingle();
+            `,
+          )
+          .eq("slug", slug)
+          .eq("status", "publicado")
+          .maybeSingle();
 
-        if (
-          cursoError
-        ) {
-          throw new Error(
-            cursoError.message,
-          );
+        if (cursoError) {
+          throw new Error(cursoError.message);
         }
 
-        if (
-          !cursoData
-        ) {
-          setErro(
-            "Treinamento não encontrado.",
-          );
+        if (!cursoData) {
+          setErro("Treinamento não encontrado.");
 
           return;
         }
 
-        setCurso(
-          cursoData as Curso,
-        );
+        setCurso(cursoData as Curso);
 
-        const cursoId =
-          cursoData.id;
+        const cursoId = cursoData.id;
 
         /* ===============================================
            CATEGORIA
         =============================================== */
 
-        if (
-          cursoData.categoria_id
-        ) {
-          const {
-            data:
-              categoriaData,
-            error:
-              categoriaError,
-          } =
-            await supabase
-              .from(
-                "treinamentos_categorias",
-              )
-              .select(`
+        if (cursoData.categoria_id) {
+          const { data: categoriaData, error: categoriaError } = await supabase
+            .from("treinamentos_categorias")
+            .select(
+              `
                 id,
                 nome,
                 slug
-              `)
-              .eq(
-                "id",
-                cursoData.categoria_id,
-              )
-              .eq(
-                "ativo",
-                true,
-              )
-              .maybeSingle();
+              `,
+            )
+            .eq("id", cursoData.categoria_id)
+            .eq("ativo", true)
+            .maybeSingle();
 
-          if (
-            categoriaError
-          ) {
-            throw new Error(
-              categoriaError.message,
-            );
+          if (categoriaError) {
+            throw new Error(categoriaError.message);
           }
 
-          setCategoria(
-            categoriaData as
-              | Categoria
-              | null,
-          );
+          setCategoria(categoriaData as Categoria | null);
         } else {
-          setCategoria(
-            null,
-          );
+          setCategoria(null);
         }
 
         /* ===============================================
            MÓDULOS
         =============================================== */
 
-        const {
-          data:
-            modulosData,
-          error:
-            modulosError,
-        } =
-          await supabase
-            .from(
-              "treinamentos_modulos",
-            )
-            .select(`
+        const { data: modulosData, error: modulosError } = await supabase
+          .from("treinamentos_modulos")
+          .select(
+            `
               id,
               titulo,
               descricao,
               ordem
-            `)
-            .eq(
-              "curso_id",
-              cursoId,
-            )
-            .eq(
-              "ativo",
-              true,
-            )
-            .order(
-              "ordem",
-              {
-                ascending:
-                  true,
-              },
-            );
+            `,
+          )
+          .eq("curso_id", cursoId)
+          .eq("ativo", true)
+          .order("ordem", {
+            ascending: true,
+          });
 
-        if (
-          modulosError
-        ) {
-          throw new Error(
-            modulosError.message,
-          );
+        if (modulosError) {
+          throw new Error(modulosError.message);
         }
 
-        setModulos(
-          (modulosData ??
-            []) as Modulo[],
-        );
+        setModulos((modulosData ?? []) as Modulo[]);
 
-        if (
-          modulosData &&
-          modulosData.length >
-            0
-        ) {
-          setModuloAberto(
-            modulosData[0]
-              .id,
-          );
+        if (modulosData && modulosData.length > 0) {
+          setModuloAberto(modulosData[0].id);
         }
 
         /* ===============================================
            AULAS EXTRAS
         =============================================== */
 
-        const {
-          data:
-            aulasExtrasData,
-          error:
-            aulasExtrasError,
-        } =
+        const { data: aulasExtrasData, error: aulasExtrasError } =
           await supabase
-            .from(
-              "treinamentos_aulas_extras",
-            )
-            .select(`
+            .from("treinamentos_aulas_extras")
+            .select(
+              `
               id,
               titulo,
               descricao,
               ordem,
               grupo_titulo,
               grupo_ordem
-            `)
-            .eq(
-              "curso_id",
-              cursoId,
+            `,
             )
-            .eq(
-              "ativo",
-              true,
-            )
-            .order(
-              "grupo_ordem",
-              {
-                ascending:
-                  true,
-              },
-            )
-            .order(
-              "ordem",
-              {
-                ascending:
-                  true,
-              },
-            );
+            .eq("curso_id", cursoId)
+            .eq("ativo", true)
+            .order("grupo_ordem", {
+              ascending: true,
+            })
+            .order("ordem", {
+              ascending: true,
+            });
 
-        if (
-          aulasExtrasError
-        ) {
-          throw new Error(
-            aulasExtrasError.message,
-          );
+        if (aulasExtrasError) {
+          throw new Error(aulasExtrasError.message);
         }
 
-        const aulasExtras =
-          (
-            aulasExtrasData ??
-            []
-          ) as AulaExtra[];
+        const aulasExtras = (aulasExtrasData ?? []) as AulaExtra[];
 
-        const gruposMap =
-          new Map<
-            number,
-            GrupoAulaExtra
-          >();
+        const gruposMap = new Map<number, GrupoAulaExtra>();
 
-        aulasExtras.forEach(
-          (aula) => {
-            const grupoOrdem =
-              Number(
-                aula.grupo_ordem ??
-                  1,
-              );
+        aulasExtras.forEach((aula) => {
+          const grupoOrdem = Number(aula.grupo_ordem ?? 1);
 
-            const grupoTitulo =
-              aula.grupo_titulo?.trim() ||
-              "Aulas Extras";
+          const grupoTitulo = aula.grupo_titulo?.trim() || "Aulas Extras";
 
-            if (
-              !gruposMap.has(
-                grupoOrdem,
-              )
-            ) {
-              gruposMap.set(
-                grupoOrdem,
-                {
-                  titulo:
-                    grupoTitulo,
+          if (!gruposMap.has(grupoOrdem)) {
+            gruposMap.set(grupoOrdem, {
+              titulo: grupoTitulo,
 
-                  ordem:
-                    grupoOrdem,
+              ordem: grupoOrdem,
 
-                  aulas: [],
-                },
-              );
-            }
+              aulas: [],
+            });
+          }
 
-            gruposMap
-              .get(
-                grupoOrdem,
-              )
-              ?.aulas.push(
-                aula,
-              );
-          },
-        );
+          gruposMap.get(grupoOrdem)?.aulas.push(aula);
+        });
 
         setGruposAulasExtras(
-          Array.from(
-            gruposMap.values(),
-          ).sort(
-            (
-              a,
-              b,
-            ) =>
-              a.ordem -
-              b.ordem,
-          ),
+          Array.from(gruposMap.values()).sort((a, b) => a.ordem - b.ordem),
         );
 
         /* ===============================================
            BENEFÍCIOS
         =============================================== */
 
-        const {
-          data:
-            beneficiosData,
-          error:
-            beneficiosError,
-        } =
-          await supabase
-            .from(
-              "treinamentos_beneficios",
-            )
-            .select(`
+        const { data: beneficiosData, error: beneficiosError } = await supabase
+          .from("treinamentos_beneficios")
+          .select(
+            `
               id,
               titulo,
               icone,
               ordem
-            `)
-            .eq(
-              "curso_id",
-              cursoId,
-            )
-            .eq(
-              "ativo",
-              true,
-            )
-            .order(
-              "ordem",
-              {
-                ascending:
-                  true,
-              },
-            );
+            `,
+          )
+          .eq("curso_id", cursoId)
+          .eq("ativo", true)
+          .order("ordem", {
+            ascending: true,
+          });
 
-        if (
-          beneficiosError
-        ) {
-          throw new Error(
-            beneficiosError.message,
-          );
+        if (beneficiosError) {
+          throw new Error(beneficiosError.message);
         }
 
-        setBeneficios(
-          (beneficiosData ??
-            []) as Beneficio[],
-        );
+        setBeneficios((beneficiosData ?? []) as Beneficio[]);
 
         /* ===============================================
            CERTIFICADOS
         =============================================== */
 
-        const {
-          data:
-            certificadosData,
-          error:
-            certificadosError,
-        } =
+        const { data: certificadosData, error: certificadosError } =
           await supabase
-            .from(
-              "treinamentos_certificados",
-            )
-            .select(`
+            .from("treinamentos_certificados")
+            .select(
+              `
               id,
               titulo,
               descricao,
               imagem_url,
               ordem
-            `)
-            .eq(
-              "curso_id",
-              cursoId,
+            `,
             )
-            .eq(
-              "ativo",
-              true,
-            )
-            .order(
-              "ordem",
-              {
-                ascending:
-                  true,
-              },
-            );
+            .eq("curso_id", cursoId)
+            .eq("ativo", true)
+            .order("ordem", {
+              ascending: true,
+            });
 
-        if (
-          certificadosError
-        ) {
-          throw new Error(
-            certificadosError.message,
-          );
+        if (certificadosError) {
+          throw new Error(certificadosError.message);
         }
 
-        setCertificados(
-          (certificadosData ??
-            []) as Certificado[],
-        );
+        setCertificados((certificadosData ?? []) as Certificado[]);
 
         /* ===============================================
            PROFESSOR
         =============================================== */
 
-        const {
-          data:
-            relacao,
-          error:
-            relacaoError,
-        } =
-          await supabase
-            .from(
-              "treinamentos_curso_professores",
-            )
-            .select(
-              "professor_id",
-            )
-            .eq(
-              "curso_id",
-              cursoId,
-            )
-            .order(
-              "ordem",
-              {
-                ascending:
-                  true,
-              },
-            )
-            .limit(1)
-            .maybeSingle();
+        const { data: relacao, error: relacaoError } = await supabase
+          .from("treinamentos_curso_professores")
+          .select("professor_id")
+          .eq("curso_id", cursoId)
+          .order("ordem", {
+            ascending: true,
+          })
+          .limit(1)
+          .maybeSingle();
 
-        if (
-          relacaoError
-        ) {
-          throw new Error(
-            relacaoError.message,
-          );
+        if (relacaoError) {
+          throw new Error(relacaoError.message);
         }
 
-        const relacionamento =
-          relacao as
-            | CursoProfessor
-            | null;
+        const relacionamento = relacao as CursoProfessor | null;
 
-        if (
-          relacionamento
-            ?.professor_id
-        ) {
-          const {
-            data:
-              professorData,
-            error:
-              professorError,
-          } =
-            await supabase
-              .from(
-                "treinamentos_professores",
-              )
-              .select(`
+        if (relacionamento?.professor_id) {
+          const { data: professorData, error: professorError } = await supabase
+            .from("treinamentos_professores")
+            .select(
+              `
                 id,
                 nome,
                 descricao,
                 cargo,
                 foto_url
-              `)
-              .eq(
-                "id",
-                relacionamento.professor_id,
-              )
-              .maybeSingle();
+              `,
+            )
+            .eq("id", relacionamento.professor_id)
+            .maybeSingle();
 
-          if (
-            professorError
-          ) {
-            throw new Error(
-              professorError.message,
-            );
+          if (professorError) {
+            throw new Error(professorError.message);
           }
 
-          setProfessor(
-            professorData as
-              | Professor
-              | null,
-          );
+          setProfessor(professorData as Professor | null);
         } else {
-          setProfessor(
-            null,
-          );
+          setProfessor(null);
         }
-      } catch (
-        error
-      ) {
-        console.error(
-          "Erro carregando treinamento:",
-          error,
-        );
+      } catch (error) {
+        console.error("Erro carregando treinamento:", error);
 
         setErro(
-          error instanceof
-            Error
+          error instanceof Error
             ? error.message
             : "Não foi possível carregar o treinamento.",
         );
       } finally {
-        setCarregando(
-          false,
-        );
+        setCarregando(false);
       }
     }
 
     void carregar();
-  }, [
-    slug,
-  ]);
+  }, [slug]);
 
   /* =======================================================
      ANALYTICS - PRÉVIA
@@ -986,25 +612,17 @@ export default function TreinamentoPage({
       return;
     }
 
-    void registrarEventoTreinamento(
-      {
-        slug:
-          curso.slug,
+    void registrarEventoTreinamento({
+      slug: curso.slug,
 
-        titulo:
-          curso.titulo,
+      titulo: curso.titulo,
 
-        evento:
-          "previa_click",
+      evento: "previa_click",
 
-        origem:
-          `/${curso.slug}`,
-      },
-    );
+      origem: `/${curso.slug}`,
+    });
 
-    setVideoModalOpen(
-      true,
-    );
+    setVideoModalOpen(true);
   }
 
   /* =======================================================
@@ -1089,566 +707,344 @@ export default function TreinamentoPage({
      LOADING
   ======================================================= */
 
-if (carregando) {
-  return (
-    <>
-      <SiteHeader />
+  if (carregando) {
+    return (
+      <>
+        <SiteHeader />
 
-      <main className="training-page-loading">
-        <LoaderCircle
-          size={32}
-          className="training-spin"
-        />
+        <main className="training-page-loading">
+          <LoaderCircle size={32} className="training-spin" />
 
-        <p>
-          Carregando treinamento...
-        </p>
-      </main>
+          <p>Carregando treinamento...</p>
+        </main>
 
-      <SiteFooter />
-    </>
-  );
-}
+        <SiteFooter />
+      </>
+    );
+  }
 
   /* =======================================================
      ERRO
   ======================================================= */
 
-  if (
-  erro ||
-  !curso
-) {
-  return (
-    <>
-      <SiteHeader />
+  if (erro || !curso) {
+    return (
+      <>
+        <SiteHeader />
 
-      <main className="training-not-found">
-        <BookOpen
-          size={36}
-        />
+        <main className="training-not-found">
+          <BookOpen size={36} />
 
-        <h1>
-          Treinamento não encontrado
-        </h1>
+          <h1>Treinamento não encontrado</h1>
 
-        <p>
-          O treinamento informado não está
-          disponível ou ainda não foi publicado.
-        </p>
+          <p>
+            O treinamento informado não está disponível ou ainda não foi
+            publicado.
+          </p>
 
-        <button
-          type="button"
-          onClick={() =>
-            router.push("/")
-          }
-        >
-          <ArrowLeft
-            size={17}
-          />
+          <button type="button" onClick={() => router.push("/")}>
+            <ArrowLeft size={17} />
+            Voltar para o início
+          </button>
+        </main>
 
-          Voltar para o início
-        </button>
-      </main>
-
-      <SiteFooter />
-    </>
-  );
-}
+        <SiteFooter />
+      </>
+    );
+  }
 
   /* =======================================================
      VÍDEO
   ======================================================= */
 
-  const embedUrl =
-    getEmbedUrl(
-      curso.video_introdutorio_url,
-    );
+  const embedUrl = getEmbedUrl(curso.video_introdutorio_url);
 
   /* =======================================================
      PÁGINA
   ======================================================= */
 
-return (
-  <>
-    <SiteHeader />
+  return (
+    <>
+      <SiteHeader />
 
-    <main className="training-detail-page">
-
-      {/* =================================================
+      <main className="training-detail-page">
+        {/* =================================================
           HERO
       ================================================= */}
 
-      <section
-        className="training-detail-hero"
-      >
-        <div className="container">
+        <section className="training-detail-hero">
+          <div className="container">
+            <div className="training-detail-heading">
+              <div className="training-breadcrumb">
+                <Link href="/">Início</Link>
 
-          <div className="training-detail-heading">
+                <ChevronRight size={14} />
 
-            <div className="training-breadcrumb">
+                <Link href="/cursos">Treinamentos</Link>
 
-              <Link href="/">
-                Início
-              </Link>
+                <ChevronRight size={14} />
 
-              <ChevronRight
-                size={14}
-              />
+                <span>{curso.titulo}</span>
+              </div>
 
-              <Link href="/cursos">
-                Treinamentos
-              </Link>
-
-              <ChevronRight
-                size={14}
-              />
-
-              <span>
-                {
-                  curso.titulo
-                }
-              </span>
-
-            </div>
-
-            {/* =============================================
+              {/* =============================================
                 CATEGORIA DO TREINAMENTO
             ============================================= */}
 
-            {categoria ? (
-              <Link
-                href={`/cursos?categoria=${categoria.slug}`}
-                className="section-kicker"
-              >
-                {
-                  categoria.nome
-                }
-              </Link>
-            ) : (
-              <span className="section-kicker">
-                2BSUPPLY ACADEMY
-              </span>
-            )}
-
-            <h1>
-              {
-                curso.titulo
-              }
-            </h1>
-
-            {curso.descricao && (
-              <p className="training-detail-intro">
-                {
-                  curso.descricao
-                }
-              </p>
-            )}
-
-            <div className="training-detail-meta">
-
-              <span>
-                <GraduationCap
-                  size={18}
-                />
-
-                Treinamento
-                profissional
-              </span>
-
-              <span>
-                <Clock3
-                  size={18}
-                />
-
-                Acesso online vitalício
-              </span>
-
-              {professor && (
-                <span>
-                  <UserRound
-                    size={18}
-                  />
-
-                  {
-                    professor.nome
-                  }
-                </span>
+              {categoria ? (
+                <Link
+                  href={`/cursos?categoria=${categoria.slug}`}
+                  className="section-kicker"
+                >
+                  {categoria.nome}
+                </Link>
+              ) : (
+                <span className="section-kicker">2BSUPPLY ACADEMY</span>
               )}
 
+              <h1>{curso.titulo}</h1>
+
+              {curso.descricao && (
+                <p className="training-detail-intro">{curso.descricao}</p>
+              )}
+
+              <div className="training-detail-meta">
+                <span>
+                  <GraduationCap size={18} />
+                  Treinamento profissional
+                </span>
+
+                <span>
+                  <Clock3 size={18} />
+                  Acesso online vitalício
+                </span>
+
+                {professor && (
+                  <span>
+                    <UserRound size={18} />
+
+                    {professor.nome}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* =================================================
+        {/* =================================================
           CONTEÚDO
       ================================================= */}
 
-      <div className="container training-detail-layout">
-
-        {/* ===============================================
+        <div className="container training-detail-layout">
+          {/* ===============================================
             CONTEÚDO PRINCIPAL
         =============================================== */}
 
-        <div className="training-detail-main">
-
-          {/* =============================================
+          <div className="training-detail-main">
+            {/* =============================================
               BENEFÍCIOS
           ============================================= */}
 
-          {beneficios.length >
-            0 && (
-            <section className="training-content-box">
+            {beneficios.length > 0 && (
+              <section className="training-content-box">
+                <div className="training-section-heading">
+                  <span>O que você vai desenvolver</span>
 
-              <div className="training-section-heading">
+                  <h2>Benefícios do treinamento</h2>
+                </div>
 
-                <span>
-                  O que você vai
-                  desenvolver
-                </span>
-
-                <h2>
-                  Benefícios do
-                  treinamento
-                </h2>
-
-              </div>
-
-              <div className="training-benefits-grid">
-
-                {beneficios.map(
-                  (
-                    beneficio,
-                  ) => {
+                <div className="training-benefits-grid">
+                  {beneficios.map((beneficio) => {
                     const Icon =
-                      benefitIcons[
-                        beneficio.icone as BenefitIconName
-                      ] ||
-                      Check;
+                      benefitIcons[beneficio.icone as BenefitIconName] || Check;
 
                     return (
-                      <div
-                        key={
-                          beneficio.id
-                        }
-                        className="training-benefit"
-                      >
+                      <div key={beneficio.id} className="training-benefit">
                         <div className="training-benefit-icon">
-
-                          <Icon
-                            size={
-                              22
-                            }
-                          />
-
+                          <Icon size={22} />
                         </div>
 
-                        <span>
-                          {
-                            beneficio.titulo
-                          }
-                        </span>
+                        <span>{beneficio.titulo}</span>
                       </div>
                     );
-                  },
-                )}
+                  })}
+                </div>
+              </section>
+            )}
 
-              </div>
-            </section>
-          )}
-
-          {/* =============================================
+            {/* =============================================
               POR QUE APRENDER
           ============================================= */}
 
-          {curso.porque_aprender && (
-            <section className="training-section">
+            {curso.porque_aprender && (
+              <section className="training-section">
+                <div className="training-section-heading">
+                  <span>DESENVOLVIMENTO</span>
 
-              <div className="training-section-heading">
+                  <h2>Por que aprender sobre este tema?</h2>
+                </div>
 
-                <span>
-                  DESENVOLVIMENTO
-                </span>
+                <p className="training-section-text">{curso.porque_aprender}</p>
+              </section>
+            )}
 
-                <h2>
-                  Por que aprender
-                  sobre este tema?
-                </h2>
-
-              </div>
-
-              <p className="training-section-text">
-                {
-                  curso.porque_aprender
-                }
-              </p>
-
-            </section>
-          )}
-
-          {/* =============================================
+            {/* =============================================
               PÚBLICO ALVO
           ============================================= */}
 
-          {curso.publico_alvo && (
-            <section className="training-section">
+            {curso.publico_alvo && (
+              <section className="training-section">
+                <div className="training-section-heading">
+                  <span>PARA QUEM É</span>
 
-              <div className="training-section-heading">
+                  <h2>Público-alvo</h2>
+                </div>
 
-                <span>
-                  PARA QUEM É
-                </span>
+                <div className="training-audience">
+                  <Target size={23} />
 
-                <h2>
-                  Público-alvo
-                </h2>
+                  <p>{curso.publico_alvo}</p>
+                </div>
+              </section>
+            )}
 
-              </div>
-
-              <div className="training-audience">
-
-                <Target
-                  size={23}
-                />
-
-                <p>
-                  {
-                    curso.publico_alvo
-                  }
-                </p>
-
-              </div>
-            </section>
-          )}
-
-          {/* =============================================
+            {/* =============================================
               CONTEÚDO DO CURSO
           ============================================= */}
 
-          {modulos.length >
-            0 && (
-            <section className="training-section">
+            {modulos.length > 0 && (
+              <section className="training-section">
+                <div className="training-section-heading training-section-heading-row">
+                  <div>
+                    <span>CONTEÚDO</span>
 
-              <div className="training-section-heading training-section-heading-row">
+                    <h2>Conteúdo do treinamento</h2>
+                  </div>
 
-                <div>
-
-                  <span>
-                    CONTEÚDO
-                  </span>
-
-                  <h2>
-                    Conteúdo do
-                    treinamento
-                  </h2>
-
+                  <small>
+                    {modulos.length} módulo
+                    {modulos.length === 1 ? "" : "s"}
+                  </small>
                 </div>
 
-                <small>
-                  {
-                    modulos.length
-                  }{" "}
-                  módulo
-                  {modulos.length ===
-                  1
-                    ? ""
-                    : "s"}
-                </small>
-
-              </div>
-
-              <div className="training-modules">
-
-                {modulos.map(
-                  (
-                    modulo,
-                    index,
-                  ) => {
-                    const aberto =
-                      moduloAberto ===
-                      modulo.id;
+                <div className="training-modules">
+                  {modulos.map((modulo, index) => {
+                    const aberto = moduloAberto === modulo.id;
 
                     return (
                       <article
                         className={`training-module ${
-                          aberto
-                            ? "training-module-open"
-                            : ""
+                          aberto ? "training-module-open" : ""
                         }`}
-                        key={
-                          modulo.id
-                        }
+                        key={modulo.id}
                       >
                         <button
                           type="button"
                           className="training-module-header"
                           onClick={() =>
-                            setModuloAberto(
-                              aberto
-                                ? null
-                                : modulo.id,
-                            )
+                            setModuloAberto(aberto ? null : modulo.id)
                           }
                         >
                           <div>
-
                             <span className="training-module-number">
-                              {String(
-                                index +
-                                  1,
-                              ).padStart(
-                                2,
-                                "0",
-                              )}
+                              {String(index + 1).padStart(2, "0")}
                             </span>
 
-                            <strong>
-                              {
-                                modulo.titulo
-                              }
-                            </strong>
-
+                            <strong>{modulo.titulo}</strong>
                           </div>
 
-                          <ChevronDown
-                            size={
-                              20
-                            }
-                          />
-
+                          <ChevronDown size={20} />
                         </button>
 
-                        {aberto &&
-                          modulo.descricao && (
-                            <div
-                              className="training-module-content"
-                              dangerouslySetInnerHTML={{
-                                __html:
-                                  modulo.descricao,
-                              }}
-                            />
-                          )}
-
+                        {aberto && modulo.descricao && (
+                          <div
+                            className="training-module-content"
+                            dangerouslySetInnerHTML={{
+                              __html: modulo.descricao,
+                            }}
+                          />
+                        )}
                       </article>
                     );
-                  },
-                )}
+                  })}
+                </div>
+              </section>
+            )}
 
-              </div>
-            </section>
-          )}
-
-          {/* =============================================
+            {/* =============================================
               AULAS EXTRAS
           ============================================= */}
 
-          {gruposAulasExtras.length >
-            0 && (
-            <section className="training-section">
-
-              {/* ===========================================
+            {gruposAulasExtras.length > 0 && (
+              <section className="training-section">
+                {/* ===========================================
                   CABEÇALHO PRINCIPAL - RECOLHIDO
               =========================================== */}
 
-              <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#08111d]">
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#08111d]">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left transition hover:bg-white/[0.025]"
+                    onClick={() => {
+                      setAulasExtrasAberto((current) => !current);
 
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left transition hover:bg-white/[0.025]"
-                  onClick={() => {
-                    setAulasExtrasAberto(
-                      (current) =>
-                        !current,
-                    );
+                      if (aulasExtrasAberto) {
+                        setGrupoAulaExtraAberto(null);
+                      }
+                    }}
+                    aria-expanded={aulasExtrasAberto}
+                  >
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#59e199]">
+                        Conteúdo adicional
+                      </span>
 
-                    if (
-                      aulasExtrasAberto
-                    ) {
-                      setGrupoAulaExtraAberto(
-                        null,
-                      );
-                    }
-                  }}
-                  aria-expanded={
-                    aulasExtrasAberto
-                  }
-                >
-                  <div>
-
-                    <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#59e199]">
-                      Conteúdo adicional
-                    </span>
-
-                    <h2 className="mt-1 text-xl font-bold text-white">
-                      Aulas Extras
-                    </h2>
-
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-3">
-
-                    <span className="hidden text-xs font-medium text-white/50 sm:block">
-                      {
-                        gruposAulasExtras.reduce(
-                          (
-                            total,
-                            grupo,
-                          ) =>
-                            total +
-                            grupo.aulas.length,
-                          0,
-                        )
-                      }{" "}
-                      conteúdo
-                      {gruposAulasExtras.reduce(
-                        (
-                          total,
-                          grupo,
-                        ) =>
-                          total +
-                          grupo.aulas.length,
-                        0,
-                      ) === 1
-                        ? ""
-                        : "s"}
-                    </span>
-
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-[#59e199]">
-                      <ChevronDown
-                        size={19}
-                        className={`transition-transform duration-200 ${
-                          aulasExtrasAberto
-                            ? "rotate-180"
-                            : ""
-                        }`}
-                      />
+                      <h2 className="mt-1 text-xl font-bold text-white">
+                        Aulas Extras
+                      </h2>
                     </div>
 
-                  </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="hidden text-xs font-medium text-white/50 sm:block">
+                        {gruposAulasExtras.reduce(
+                          (total, grupo) => total + grupo.aulas.length,
+                          0,
+                        )}{" "}
+                        conteúdo
+                        {gruposAulasExtras.reduce(
+                          (total, grupo) => total + grupo.aulas.length,
+                          0,
+                        ) === 1
+                          ? ""
+                          : "s"}
+                      </span>
 
-                </button>
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-[#59e199]">
+                        <ChevronDown
+                          size={19}
+                          className={`transition-transform duration-200 ${
+                            aulasExtrasAberto ? "rotate-180" : ""
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </button>
 
-                {/* =========================================
+                  {/* =========================================
                     GRUPOS DE CONTEÚDO
                 ========================================= */}
 
-                {aulasExtrasAberto && (
-                  <div className="space-y-3 border-t border-white/10 p-4 sm:p-5">
-
-                    {gruposAulasExtras.map(
-                      (
-                        grupo,
-                      ) => {
+                  {aulasExtrasAberto && (
+                    <div className="space-y-3 border-t border-white/10 p-4 sm:p-5">
+                      {gruposAulasExtras.map((grupo) => {
                         const grupoAberto =
-                          grupoAulaExtraAberto ===
-                          grupo.ordem;
+                          grupoAulaExtraAberto === grupo.ordem;
 
                         return (
                           <div
                             key={`${grupo.ordem}-${grupo.titulo}`}
                             className="overflow-hidden rounded-xl border border-white/10 bg-[#0c1724]"
                           >
-
                             {/* =================================
                                 TÍTULO DO GRUPO - RECOLHIDO
                             ================================= */}
@@ -1658,55 +1054,36 @@ return (
                               className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-white/[0.025]"
                               onClick={() =>
                                 setGrupoAulaExtraAberto(
-                                  grupoAberto
-                                    ? null
-                                    : grupo.ordem,
+                                  grupoAberto ? null : grupo.ordem,
                                 )
                               }
-                              aria-expanded={
-                                grupoAberto
-                              }
+                              aria-expanded={grupoAberto}
                             >
                               <div className="min-w-0">
-
                                 <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#59e199]">
                                   Conteúdo complementar
                                 </span>
 
                                 <h3 className="mt-1 text-base font-bold text-white">
-                                  {
-                                    grupo.titulo
-                                  }
+                                  {grupo.titulo}
                                 </h3>
-
                               </div>
 
                               <div className="flex shrink-0 items-center gap-3">
-
                                 <span className="hidden text-xs font-medium text-white/50 sm:block">
-                                  {
-                                    grupo.aulas.length
-                                  }{" "}
-                                  conteúdo
-                                  {grupo.aulas.length ===
-                                  1
-                                    ? ""
-                                    : "s"}
+                                  {grupo.aulas.length} conteúdo
+                                  {grupo.aulas.length === 1 ? "" : "s"}
                                 </span>
 
                                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-[#59e199]">
                                   <ChevronDown
                                     size={17}
                                     className={`transition-transform duration-200 ${
-                                      grupoAberto
-                                        ? "rotate-180"
-                                        : ""
+                                      grupoAberto ? "rotate-180" : ""
                                     }`}
                                   />
                                 </div>
-
                               </div>
-
                             </button>
 
                             {/* =================================
@@ -1715,13 +1092,10 @@ return (
 
                             {grupoAberto && (
                               <div className="border-t border-white/10">
-
                                 {/* TABELA DESKTOP */}
 
                                 <div className="hidden md:block">
-
                                   <div className="grid grid-cols-[minmax(240px,0.85fr)_minmax(0,1.15fr)] border-b border-white/10 bg-white/[0.035]">
-
                                     <div className="px-5 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-white/60">
                                       Conteúdo
                                     </div>
@@ -1729,571 +1103,360 @@ return (
                                     <div className="border-l border-white/10 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-white/60">
                                       O que o aluno encontrará
                                     </div>
-
                                   </div>
 
-                                  {grupo.aulas.map(
-                                    (
-                                      aula,
-                                      index,
-                                    ) => (
-                                      <article
-                                        key={
-                                          aula.id
-                                        }
-                                        className="grid grid-cols-[minmax(240px,0.85fr)_minmax(0,1.15fr)] border-b border-white/10 last:border-b-0"
-                                      >
-
-                                        <div className="flex gap-3 px-5 py-4">
-
-                                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#59e199]/10 text-xs font-bold text-[#59e199]">
-                                            {String(
-                                              index +
-                                                1,
-                                            ).padStart(
-                                              2,
-                                              "0",
-                                            )}
-                                          </div>
-
-                                          <h4 className="pt-1 text-sm font-semibold leading-5 text-white">
-                                            {
-                                              aula.titulo
-                                            }
-                                          </h4>
-
+                                  {grupo.aulas.map((aula, index) => (
+                                    <article
+                                      key={aula.id}
+                                      className="grid grid-cols-[minmax(240px,0.85fr)_minmax(0,1.15fr)] border-b border-white/10 last:border-b-0"
+                                    >
+                                      <div className="flex gap-3 px-5 py-4">
+                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#59e199]/10 text-xs font-bold text-[#59e199]">
+                                          {String(index + 1).padStart(2, "0")}
                                         </div>
 
-                                        <div className="border-l border-white/10 px-5 py-4">
+                                        <h4 className="pt-1 text-sm font-semibold leading-5 text-white">
+                                          {aula.titulo}
+                                        </h4>
+                                      </div>
 
-                                          {aula.descricao ? (
-                                            <p className="text-sm leading-6 text-white/65">
-                                              {
-                                                aula.descricao
-                                              }
-                                            </p>
-                                          ) : (
-                                            <span className="text-sm text-white/30">
-                                              —
-                                            </span>
-                                          )}
-
-                                        </div>
-
-                                      </article>
-                                    ),
-                                  )}
-
+                                      <div className="border-l border-white/10 px-5 py-4">
+                                        {aula.descricao ? (
+                                          <p className="text-sm leading-6 text-white/65">
+                                            {aula.descricao}
+                                          </p>
+                                        ) : (
+                                          <span className="text-sm text-white/30">
+                                            —
+                                          </span>
+                                        )}
+                                      </div>
+                                    </article>
+                                  ))}
                                 </div>
 
                                 {/* MOBILE */}
 
                                 <div className="divide-y divide-white/10 md:hidden">
-
-                                  {grupo.aulas.map(
-                                    (
-                                      aula,
-                                      index,
-                                    ) => (
-                                      <article
-                                        key={
-                                          aula.id
-                                        }
-                                        className="p-5"
-                                      >
-
-                                        <div className="flex items-start gap-3">
-
-                                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#59e199]/10 text-xs font-bold text-[#59e199]">
-                                            {String(
-                                              index +
-                                                1,
-                                            ).padStart(
-                                              2,
-                                              "0",
-                                            )}
-                                          </div>
-
-                                          <div className="min-w-0 flex-1">
-
-                                            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/40">
-                                              Conteúdo
-                                            </span>
-
-                                            <h4 className="mt-1 text-sm font-semibold leading-5 text-white">
-                                              {
-                                                aula.titulo
-                                              }
-                                            </h4>
-
-                                            {aula.descricao && (
-                                              <div className="mt-4">
-
-                                                <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#59e199]">
-                                                  O que o aluno encontrará
-                                                </span>
-
-                                                <p className="mt-1.5 text-sm leading-6 text-white/65">
-                                                  {
-                                                    aula.descricao
-                                                  }
-                                                </p>
-
-                                              </div>
-                                            )}
-
-                                          </div>
-
+                                  {grupo.aulas.map((aula, index) => (
+                                    <article key={aula.id} className="p-5">
+                                      <div className="flex items-start gap-3">
+                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#59e199]/10 text-xs font-bold text-[#59e199]">
+                                          {String(index + 1).padStart(2, "0")}
                                         </div>
 
-                                      </article>
-                                    ),
-                                  )}
+                                        <div className="min-w-0 flex-1">
+                                          <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-white/40">
+                                            Conteúdo
+                                          </span>
 
+                                          <h4 className="mt-1 text-sm font-semibold leading-5 text-white">
+                                            {aula.titulo}
+                                          </h4>
+
+                                          {aula.descricao && (
+                                            <div className="mt-4">
+                                              <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#59e199]">
+                                                O que o aluno encontrará
+                                              </span>
+
+                                              <p className="mt-1.5 text-sm leading-6 text-white/65">
+                                                {aula.descricao}
+                                              </p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </article>
+                                  ))}
                                 </div>
-
                               </div>
                             )}
-
                           </div>
                         );
-                      },
-                    )}
+                      })}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
 
-                  </div>
-                )}
-
-              </div>
-
-            </section>
-          )}
-
-          {/* =============================================
+            {/* =============================================
               PROFESSOR
           ============================================= */}
 
-          {professor && (
-            <section className="training-section">
+            {professor && (
+              <section className="training-section">
+                <div className="training-section-heading">
+                  <span>ESPECIALISTA</span>
 
-              <div className="training-section-heading">
-
-                <span>
-                  ESPECIALISTA
-                </span>
-
-                <h2>
-                  Professor
-                </h2>
-
-              </div>
-
-              <div className="training-professor">
-
-                <div className="training-professor-photo">
-
-                  {professor.foto_url ? (
-                    <img
-                      src={
-                        professor.foto_url
-                      }
-                      alt={
-                        professor.nome
-                      }
-                    />
-                  ) : (
-                    <UserRound
-                      size={
-                        42
-                      }
-                    />
-                  )}
-
+                  <h2>Professor</h2>
                 </div>
 
-                <div className="training-professor-content">
+                <div className="training-professor">
+                  <div className="training-professor-photo">
+                    {professor.foto_url ? (
+                      <img src={professor.foto_url} alt={professor.nome} />
+                    ) : (
+                      <UserRound size={42} />
+                    )}
+                  </div>
 
-                  <h3>
-                    {
-                      professor.nome
-                    }
-                  </h3>
+                  <div className="training-professor-content">
+                    <h3>{professor.nome}</h3>
 
-                  {professor.cargo && (
-                    <span>
-                      {
-                        professor.cargo
-                      }
-                    </span>
-                  )}
+                    {professor.cargo && <span>{professor.cargo}</span>}
 
-                  {professor.descricao && (
-                    <p>
-                      {
-                        professor.descricao
-                      }
-                    </p>
-                  )}
-
+                    {professor.descricao && <p>{professor.descricao}</p>}
+                  </div>
                 </div>
-              </div>
-            </section>
-          )}
+              </section>
+            )}
 
-          {/* =============================================
+            {/* =============================================
               CERTIFICADOS
           ============================================= */}
 
-          {certificados.length >
-            0 && (
-            <section className="training-section">
+            {certificados.length > 0 && (
+              <section className="training-section">
+                <div className="training-section-heading">
+                  <span>CERTIFICAÇÃO</span>
 
-              <div className="training-section-heading">
+                  <h2>Certificados</h2>
+                </div>
 
-                <span>
-                  CERTIFICAÇÃO
-                </span>
-
-                <h2>
-                  Certificados
-                </h2>
-
-              </div>
-
-              <div className="training-certificates">
-
-                {certificados.map(
-                  (
-                    certificado,
-                  ) => (
+                <div className="training-certificates">
+                  {certificados.map((certificado) => (
                     <article
                       className="training-certificate"
-                      key={
-                        certificado.id
-                      }
+                      key={certificado.id}
                     >
-
                       {certificado.imagem_url && (
                         <div className="training-certificate-image">
-
                           <img
-                            src={
-                              certificado.imagem_url
-                            }
-                            alt={
-                              certificado.titulo
-                            }
+                            src={certificado.imagem_url}
+                            alt={certificado.titulo}
                           />
-
                         </div>
                       )}
 
                       <div className="training-certificate-content">
-
-
-
-                        <h3>
-                          {
-                            certificado.titulo
-                          }
-                        </h3>
+                        <h3>{certificado.titulo}</h3>
 
                         {certificado.descricao && (
-                          <p>
-                            {
-                              certificado.descricao
-                            }
-                          </p>
+                          <p>{certificado.descricao}</p>
                         )}
-
                       </div>
                     </article>
-                  ),
-                )}
+                  ))}
+                </div>
+              </section>
+            )}
 
-              </div>
-            </section>
-          )}
-
-          {/* =============================================
+            {/* =============================================
               CTA FINAL
           ============================================= */}
 
-          <section className="training-final-cta">
+            <section className="training-final-cta">
+              <div>
+                <span>2BSUPPLY ACADEMY</span>
 
-            <div>
+                <h2>Pronto para desenvolver novas competências?</h2>
 
-              <span>
-                2BSUPPLY ACADEMY
-              </span>
+                <p>
+                  Converse com nossa equipe e saiba mais sobre este treinamento.
+                </p>
+              </div>
 
-              <h2>
-                Pronto para
-                desenvolver novas
-                competências?
-              </h2>
+              <Link
+                href="https://api.whatsapp.com/send?phone=5521999792912"
+                target="_blank"
+                className="primary-button"
+              >
+                <svg
+                  viewBox="0 0 32 32"
+                  aria-hidden="true"
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    fill: "currentColor",
+                    stroke: "none",
+                    flexShrink: 0,
+                  }}
+                >
+                  <path d="M16.01 3C8.83 3 3 8.72 3 15.78c0 2.25.6 4.45 1.74 6.39L3 28.5l6.53-1.7a13.1 13.1 0 0 0 6.47 1.68h.01C23.19 28.48 29 22.76 29 15.7 29 8.65 23.19 3 16.01 3Zm0 23.32a10.9 10.9 0 0 1-5.56-1.5l-.4-.24-3.88 1.01 1.04-3.75-.26-.39a10.55 10.55 0 0 1-1.7-5.67c0-5.84 4.83-10.59 10.77-10.59 5.93 0 10.75 4.75 10.75 10.59 0 5.83-4.82 10.54-10.76 10.54Zm5.9-7.92c-.32-.16-1.91-.93-2.21-1.04-.3-.11-.52-.16-.74.16-.22.32-.85 1.04-1.04 1.25-.19.21-.38.24-.71.08-.32-.16-1.36-.49-2.59-1.57-.96-.84-1.61-1.88-1.8-2.2-.19-.32-.02-.49.14-.65.15-.14.32-.37.49-.56.16-.19.22-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.74-1.76-1.01-2.41-.27-.64-.54-.55-.74-.56h-.63c-.22 0-.57.08-.87.4-.3.32-1.15 1.12-1.15 2.73 0 1.61 1.19 3.16 1.35 3.38.16.21 2.34 3.51 5.67 4.92.79.34 1.41.54 1.89.69.79.25 1.52.21 2.09.13.64-.09 1.91-.77 2.18-1.51.27-.75.27-1.39.19-1.52-.08-.13-.3-.21-.62-.37Z" />
+                </svg>
+                Falar com um especialista
+              </Link>
+            </section>
+          </div>
 
-              <p>
-                Converse com nossa
-                equipe e saiba mais
-                sobre este
-                treinamento.
-              </p>
-
-            </div>
-
-           <Link
-  href="https://api.whatsapp.com/send?phone=5521999792912" target="_blank"
-  className="primary-button"
->
-  <svg
-    viewBox="0 0 32 32"
-    aria-hidden="true"
-    style={{
-      width: "20px",
-      height: "20px",
-      fill: "currentColor",
-      stroke: "none",
-      flexShrink: 0,
-    }}
-  >
-    <path d="M16.01 3C8.83 3 3 8.72 3 15.78c0 2.25.6 4.45 1.74 6.39L3 28.5l6.53-1.7a13.1 13.1 0 0 0 6.47 1.68h.01C23.19 28.48 29 22.76 29 15.7 29 8.65 23.19 3 16.01 3Zm0 23.32a10.9 10.9 0 0 1-5.56-1.5l-.4-.24-3.88 1.01 1.04-3.75-.26-.39a10.55 10.55 0 0 1-1.7-5.67c0-5.84 4.83-10.59 10.77-10.59 5.93 0 10.75 4.75 10.75 10.59 0 5.83-4.82 10.54-10.76 10.54Zm5.9-7.92c-.32-.16-1.91-.93-2.21-1.04-.3-.11-.52-.16-.74.16-.22.32-.85 1.04-1.04 1.25-.19.21-.38.24-.71.08-.32-.16-1.36-.49-2.59-1.57-.96-.84-1.61-1.88-1.8-2.2-.19-.32-.02-.49.14-.65.15-.14.32-.37.49-.56.16-.19.22-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.74-1.76-1.01-2.41-.27-.64-.54-.55-.74-.56h-.63c-.22 0-.57.08-.87.4-.3.32-1.15 1.12-1.15 2.73 0 1.61 1.19 3.16 1.35 3.38.16.21 2.34 3.51 5.67 4.92.79.34 1.41.54 1.89.69.79.25 1.52.21 2.09.13.64-.09 1.91-.77 2.18-1.51.27-.75.27-1.39.19-1.52-.08-.13-.3-.21-.62-.37Z" />
-  </svg>
-
-  Falar com um especialista
-</Link>
-
-          </section>
-        </div>
-
-        {/* =================================================
+          {/* =================================================
             CARD LATERAL
         ================================================= */}
 
-        <aside className="training-video-sidebar">
-          <div className="training-video-card">
-
-            {/* =============================================
+          <aside className="training-video-sidebar">
+            <div className="training-video-card">
+              {/* =============================================
                 CAPA / VÍDEO
             ============================================= */}
 
-            <div className="training-video">
+              <div className="training-video">
+                {curso.imagem_url ? (
+                  <div className="training-video-image">
+                    <img src={curso.imagem_url} alt={curso.titulo} />
 
-              {curso.imagem_url ? (
+                    {embedUrl && (
+                      <button
+                        type="button"
+                        className="training-video-play"
+                        aria-label="Assistir prévia do curso"
+                        onClick={abrirPreviaCurso}
+                      >
+                        <Play size={28} fill="currentColor" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="training-video-placeholder">
+                    <Video size={42} />
 
-                <div className="training-video-image">
+                    <span>Vídeo introdutório</span>
 
-                  <img
-                    src={
-                      curso.imagem_url
-                    }
-                    alt={
-                      curso.titulo
-                    }
-                  />
+                    {embedUrl && (
+                      <button
+                        type="button"
+                        className="training-video-placeholder-button"
+                        onClick={abrirPreviaCurso}
+                      >
+                        <Play size={18} fill="currentColor" />
+                        Assistir vídeo
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
 
-                  {embedUrl && (
-                    <button
-                      type="button"
-                      className="training-video-play"
-                      aria-label="Assistir prévia do curso"
-                      onClick={
-                        abrirPreviaCurso
-                      }
-                    >
-                      <Play
-                        size={
-                          28
-                        }
-                        fill="currentColor"
-                      />
-                    </button>
-                  )}
-
-                </div>
-
-              ) : (
-
-                <div className="training-video-placeholder">
-
-                  <Video
-                    size={42}
-                  />
-
-                  <span>
-                    Vídeo
-                    introdutório
-                  </span>
-
-                  {embedUrl && (
-                    <button
-                      type="button"
-                      className="training-video-placeholder-button"
-                      onClick={
-                        abrirPreviaCurso
-                      }
-                    >
-                      <Play
-                        size={
-                          18
-                        }
-                        fill="currentColor"
-                      />
-
-                      Assistir vídeo
-                    </button>
-                  )}
-
-                </div>
-
-              )}
-
-            </div>
-
-           {/* =============================================
+              {/* =============================================
     CONTEÚDO DO CARD
 ============================================= */}
 
-<div className="training-video-content">
+              <div className="training-video-content">
+                <h3 className="training-video-course-title">{curso.titulo}</h3>
 
-  <h3 className="training-video-course-title">
-    {curso.titulo}
-  </h3>
+                {/* ===========================================
+    PREÇOS
+=========================================== */}
 
-  {/* ===========================================
-      PREÇOS
-  =========================================== */}
+                {(curso.preco_de != null ||
+                  curso.preco_para != null ||
+                  curso.parcelamento) && (
+                  <div className="training-video-price">
+                    {curso.preco_de != null && (
+                      <div className="training-video-price-old">
+                        <span>De</span>
 
-  {(curso.preco_de != null ||
-    curso.preco_para != null ||
-    curso.parcelamento) && (
-    <div className="training-video-price">
+                        <strong>{formatarPreco(curso.preco_de)}</strong>
+                      </div>
+                    )}
 
-      {curso.preco_de != null && (
-        <div className="training-video-price-old">
-          <span>De</span>
+                    {curso.parcelamento && (
+                      <ParcelamentoHtml html={curso.parcelamento} />
+                    )}
 
-          <strong>
-            {formatarPreco(
-              curso.preco_de,
-            )}
-          </strong>
-        </div>
-      )}
+                    {curso.preco_para != null && (
+                      <div
+                        className="training-video-price-current"
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          flexWrap: "wrap",
+                          gap: "6px",
+                          marginTop: "8px",
+                          fontSize: "18px",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {curso.parcelamento && (
+                          <span style={{ fontSize: "14px" }}>ou</span>
+                        )}
 
-      {curso.preco_para != null && (
-        <div className="training-video-price-current">
-          <span>Por</span>
+                       
+                          <b>{formatarPreco(curso.preco_para)}</b>
 
-          <strong>
-            {formatarPreco(
-              curso.preco_para,
-            )}
-          </strong>
-        </div>
-      )}
+                        <span style={{ fontSize: "14px" }}>à vista</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-      {curso.parcelamento && (
-        <div className="training-video-installments">
-          {curso.parcelamento}
-        </div>
-      )}
-
-    </div>
-  )}
-
-  {/* ===========================================
+                {/* ===========================================
       INSCRIÇÃO + ANALYTICS
   =========================================== */}
 
-  {botaoCompraHtml ? (
-    <div
-      className="training-video-checkout-html"
-      onClickCapture={handleCheckoutHtmlClick}
-      dangerouslySetInnerHTML={{ __html: botaoCompraHtml }}
-    />
-  ) : (
-    <Link
-      href={curso.link_inscricao || "/contato"}
-      className="training-video-primary"
-      onClick={handleInscricaoClick}
-    >
-      Inscreva-se agora
-    </Link>
-  )}
+                {botaoCompraHtml ? (
+                  <div
+                    className="training-video-checkout-html"
+                    onClickCapture={handleCheckoutHtmlClick}
+                    dangerouslySetInnerHTML={{ __html: botaoCompraHtml }}
+                  />
+                ) : (
+                  <Link
+                    href={curso.link_inscricao || "/contato"}
+                    className="training-video-primary"
+                    onClick={handleInscricaoClick}
+                  >
+                    Inscreva-se agora
+                  </Link>
+                )}
+              </div>
+            </div>
 
-</div>
-</div>
-
-{/* =============================================
+            {/* =============================================
     INFORMAÇÕES ABAIXO DO CARD
 ============================================= */}
-<div className="mt-3 flex w-full flex-col gap-2 itensimportantes">
+            <div className="mt-3 flex w-full flex-col gap-2 itensimportantes">
+              <div className="flex min-h-[42px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#121b27] px-3 py-2.5 text-center text-[11px] font-semibold text-white shadow-sm">
+                <GraduationCap size={16} className="shrink-0 text-[#59e199]" />
 
-  <div className="flex min-h-[42px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#121b27] px-3 py-2.5 text-center text-[11px] font-semibold text-white shadow-sm">
-    <GraduationCap
-      size={16}
-      className="shrink-0 text-[#59e199]"
-    />
+                <span>Treinamento profissional</span>
+              </div>
 
-    <span>
-      Treinamento profissional
-    </span>
-  </div>
+              <div className="flex min-h-[42px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#121b27] px-3 py-2.5 text-center text-[11px] font-semibold text-white shadow-sm">
+                <Clock3 size={16} className="shrink-0 text-[#59e199]" />
 
-  <div className="flex min-h-[42px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#121b27] px-3 py-2.5 text-center text-[11px] font-semibold text-white shadow-sm">
-    <Clock3
-      size={16}
-      className="shrink-0 text-[#59e199]"
-    />
+                <span>Acesso online vitalício</span>
+              </div>
 
-    <span>
-      Acesso online vitalício
-    </span>
-  </div>
+              {professor && (
+                <div className="flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#121b27] px-3 py-2.5 text-center text-[11px] font-semibold text-white shadow-sm">
+                  <UserRound size={16} className="shrink-0 text-[#59e199]" />
 
-  {professor && (
-    <div className="flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#121b27] px-3 py-2.5 text-center text-[11px] font-semibold text-white shadow-sm">
-      <UserRound
-        size={16}
-        className="shrink-0 text-[#59e199]"
-      />
+                  <span>{professor.nome}</span>
+                </div>
+              )}
+            </div>
 
-      <span>
-        {professor.nome}
-      </span>
-    </div>
-  )}
+            <Link
+              href="/certificacoes"
+              className="training-certifications-banner"
+              aria-label="Conheça as certificações da AB Suprimentos e da 2BSUPPLY"
+            >
+              <img
+                src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/certificacoes-absuprimentos-2bsupply.png"
+                alt="Certificações AB Suprimentos e 2BSUPPLY"
+                loading="lazy"
+              />
+            </Link>
+          </aside>
 
-</div>
-
-<Link
-  href="/certificacoes"
-  className="training-certifications-banner"
-  aria-label="Conheça as certificações da AB Suprimentos e da 2BSUPPLY"
->
-  <img
-    src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/certificacoes-absuprimentos-2bsupply.png"
-    alt="Certificações AB Suprimentos e 2BSUPPLY"
-    loading="lazy"
-  />
-</Link>
-
-</aside>
-
-        {/* =================================================
+          {/* =================================================
             MODAL / PRÉVIA DO CURSO
         ================================================= */}
 
-        <Dialog
-          open={
-            videoModalOpen
-          }
-          onOpenChange={
-            setVideoModalOpen
-          }
-        >
-          <DialogContent
-            className="
+          <Dialog open={videoModalOpen} onOpenChange={setVideoModalOpen}>
+            <DialogContent
+              className="
               training-preview-modal
               !w-[92vw]
               !max-w-[1150px]
@@ -2304,53 +1467,39 @@ return (
               text-white
               shadow-2xl
             "
-          >
-
-            {/* =============================================
+            >
+              {/* =============================================
                 CABEÇALHO
             ============================================= */}
 
-            <DialogHeader className="training-preview-header">
+              <DialogHeader className="training-preview-header">
+                <span className="section-kicker">Prévia do curso</span>
 
-              <span className="section-kicker">
-                Prévia do curso
-              </span>
+                <DialogTitle className="training-preview-title">
+                  {curso.titulo}
+                </DialogTitle>
+              </DialogHeader>
 
-              <DialogTitle className="training-preview-title">
-                {
-                  curso.titulo
-                }
-              </DialogTitle>
-
-            </DialogHeader>
-
-            {/* =============================================
+              {/* =============================================
                 VÍDEO
             ============================================= */}
 
-            {embedUrl &&
-              videoModalOpen && (
+              {embedUrl && videoModalOpen && (
                 <div className="training-preview-player">
-
                   <iframe
-                    src={
-                      embedUrl
-                    }
+                    src={embedUrl}
                     title={`Prévia do curso - ${curso.titulo}`}
                     allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
-
                 </div>
               )}
+            </DialogContent>
+          </Dialog>
+        </div>
+      </main>
 
-          </DialogContent>
-        </Dialog>
-
-          </div>
-    </main>
-
-    <SiteFooter />
-  </>
-);
+      <SiteFooter />
+    </>
+  );
 }

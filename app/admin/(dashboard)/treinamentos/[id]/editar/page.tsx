@@ -5497,28 +5497,33 @@ status,
       </div>
     </div>
 
-    {/* PARCELAMENTO */}
+ {/* PARCELAMENTO */}
 
-    <div className="space-y-2">
-      <Label>
-        Parcelamento
-      </Label>
+<div className="space-y-2">
+  <Label htmlFor="parcelamento">
+    Parcelamento — texto ou HTML
+  </Label>
 
-      <Input
-        value={parcelamento}
-        onChange={(event) =>
-          setParcelamento(
-            event.target.value
-          )
-        }
-        placeholder="Ex.: 12x de R$ 83,08 sem juros"
-        disabled={salvando}
-      />
+  <Textarea
+    id="parcelamento"
+    value={parcelamento}
+    onChange={(event) =>
+      setParcelamento(event.target.value)
+    }
+    placeholder={
+      '<span style="font-size: 16px;">12x de</span> <strong style="font-size: 32px;">R$ 83,08</strong>'
+    }
+    rows={4}
+    className="min-h-[120px] resize-y font-mono text-sm leading-6"
+    disabled={salvando}
+    spellCheck={false}
+  />
 
-      <p className="text-xs text-zinc-400">
-        Texto exibido abaixo do preço.
-      </p>
-    </div>
+  <p className="text-xs text-zinc-400">
+    Aceita texto simples ou HTML com strong, span e br.
+    O parcelamento aparece acima do valor à vista.
+  </p>
+</div>
 
     {/* NOME DO BOTÃO */}
 

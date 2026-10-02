@@ -4627,6 +4627,15 @@ letter-spacing: -1px;
   font-weight: 600;
   color: #667085;
 }
+.training-video-installments strong{
+    letter-spacing: -1px;
+    color: #2d7b40;
+    -webkit-background-clip: text;
+    background-clip: text;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+}
 
 .todoscta .company-box {
   display: grid;
@@ -5947,6 +5956,9 @@ letter-spacing: -1px;
 
   .footer-certifications {
     align-items: flex-start;
+  }
+  .eyebrow{
+  margin-left:0!important;
   }
 }
 
