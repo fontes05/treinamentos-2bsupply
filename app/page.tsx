@@ -666,7 +666,7 @@ async function handleNewsletterSubmit(
             <div className="eyebrow">
               <span className="eyebrow-dot" />
 
-              TREINAMENTOS PARA PROFISSIONAIS DE SUPRIMENTOS
+             Cursos de compras e suprimentos
             </div>
 
             <h1>

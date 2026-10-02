@@ -1011,61 +1011,78 @@ export default function TreinamentoPage({
      ANALYTICS - INSCRIÇÃO
   ======================================================= */
 
-  async function handleInscricaoClick(
-    event: MouseEvent<HTMLAnchorElement>,
+  function registrarCliqueInscricao() {
+    if (!curso) return;
+
+    void registrarEventoTreinamento({
+      slug: curso.slug,
+      titulo: curso.titulo,
+      evento: "inscricao_click",
+      origem: `/${curso.slug}`,
+    });
+  }
+
+  function enviarConversaoInscricao(
+    event: MouseEvent<HTMLElement>,
+    elemento: Element,
   ) {
-    if (!curso) {
-      return;
+    const reportConversion = (
+      window as Window & {
+        gtag_report_conversion?: (url?: string) => boolean;
+      }
+    ).gtag_report_conversion;
+
+    // Se a tag ainda não carregou, o checkout continua funcionando.
+    if (typeof reportConversion !== "function") return;
+
+    const link = elemento.closest("a");
+    const abreNaMesmaAba =
+      link instanceof HTMLAnchorElement &&
+      (!link.target || link.target === "_self") &&
+      !link.hasAttribute("download") &&
+      !link.hasAttribute("onclick") &&
+      !elemento.closest("[onclick]") &&
+      !event.defaultPrevented &&
+      event.button === 0 &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.shiftKey &&
+      !event.altKey &&
+      /^https?:$/.test(link.protocol);
+
+    try {
+      if (abreNaMesmaAba && link instanceof HTMLAnchorElement) {
+        // O layout redireciona após o evento, com limite de espera.
+        reportConversion(link.href);
+        event.preventDefault();
+      } else {
+        // Preserva nova aba e os scripts dos botões da Hotmart.
+        reportConversion();
+      }
+    } catch {
+      // Uma falha no rastreamento não impede a inscrição.
     }
+  }
 
-    if (
-      event.ctrlKey ||
-      event.metaKey ||
-      event.shiftKey ||
-      event.altKey
-    ) {
-      void registrarEventoTreinamento(
-        {
-          slug:
-            curso.slug,
+  function handleInscricaoClick(event: MouseEvent<HTMLAnchorElement>) {
+    if (!curso) return;
 
-          titulo:
-            curso.titulo,
+    registrarCliqueInscricao();
 
-          evento:
-            "inscricao_click",
+    // O destino /contato é uma alternativa, não um checkout.
+    if (!curso.link_inscricao) return;
 
-          origem:
-            `/${curso.slug}`,
-        },
-      );
+    enviarConversaoInscricao(event, event.currentTarget);
+  }
 
-      return;
-    }
+  function handleCheckoutHtmlClick(event: MouseEvent<HTMLDivElement>) {
+    if (!curso || !(event.target instanceof Element)) return;
 
-    const destino =
-      event.currentTarget.href;
+    const elemento = event.target.closest("a, button");
+    if (!elemento || !event.currentTarget.contains(elemento)) return;
 
-    event.preventDefault();
-
-    await registrarEventoTreinamento(
-      {
-        slug:
-          curso.slug,
-
-        titulo:
-          curso.titulo,
-
-        evento:
-          "inscricao_click",
-
-        origem:
-          `/${curso.slug}`,
-      },
-    );
-
-    window.location.href =
-      destino;
+    registrarCliqueInscricao();
+    enviarConversaoInscricao(event, elemento);
   }
 
   /* =======================================================
@@ -1972,7 +1989,7 @@ return (
 
                       <div className="training-certificate-content">
 
-                     
+
 
                         <h3>
                           {
@@ -2191,19 +2208,7 @@ return (
   {botaoCompraHtml ? (
     <div
       className="training-video-checkout-html"
-      onClickCapture={(event) => {
-        if (
-          event.target instanceof Element &&
-          event.target.closest("a, button")
-        ) {
-          void registrarEventoTreinamento({
-            slug: curso.slug,
-            titulo: curso.titulo,
-            evento: "inscricao_click",
-            origem: `/${curso.slug}`,
-          });
-        }
-      }}
+      onClickCapture={handleCheckoutHtmlClick}
       dangerouslySetInnerHTML={{ __html: botaoCompraHtml }}
     />
   ) : (
