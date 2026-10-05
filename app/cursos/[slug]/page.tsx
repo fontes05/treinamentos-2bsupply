@@ -77,29 +77,27 @@ type PageProps = {
 
 function getSupabase() {
   const supabaseUrl =
-    process.env
-      .NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-  const supabaseAnonKey =
-    process.env
-      .NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (
-    !supabaseUrl ||
-    !supabaseAnonKey
-  ) {
-    return null;
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error(
+      "Configuração do Supabase ausente: confira a URL e a chave pública na Vercel."
+    );
   }
 
   return createSupabaseClient(
     supabaseUrl,
-    supabaseAnonKey,
+    supabaseKey,
     {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
       },
-    },
+    }
   );
 }
 
