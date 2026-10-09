@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   useEffect,
   useRef,
@@ -1290,13 +1291,16 @@ export default function FloatingAssistant() {
                         <>
                           <div className="twobs-course-preview">
                             {recommendedCourse.image && (
-                              <img
+                              <Image
                                 src={
                                   recommendedCourse.image
                                 }
                                 alt={
                                   recommendedCourse.title
                                 }
+                                width={300}
+                                height={160}
+                                sizes="300px"
                               />
                             )}
 
@@ -1513,9 +1517,12 @@ export default function FloatingAssistant() {
           border: 0,
         }}
       >
-        <img
+        <Image
           src={robotImage}
           alt="Assistente 2BSUPPLY"
+          width={90}
+          height={90}
+          sizes="(max-width: 600px) 76px, 90px"
         />
       </button>
     </div>
