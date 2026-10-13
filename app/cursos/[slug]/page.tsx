@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { cache } from "react";
 
 import {
@@ -158,7 +159,9 @@ const getCursoSeo = cache(
         error,
       );
 
-      return null;
+      throw new Error(
+        "Não foi possível carregar o treinamento.",
+      );
     }
 
     return data as CursoSeo | null;
@@ -361,8 +364,8 @@ export async function generateMetadata({
       },
 
       robots: {
-        index: true,
-        follow: true,
+        index: false,
+        follow: false,
       },
     };
   }
@@ -511,6 +514,10 @@ export default async function TreinamentoPage({
       slug,
     );
 
+  if (!curso) {
+    notFound();
+  }
+
   const canonicalUrl =
     `${SITE_URL}/cursos/${encodeURIComponent(
       slug,
@@ -534,7 +541,7 @@ export default async function TreinamentoPage({
    * Se existir HTML, ele terá prioridade sobre link_inscricao.
    */
   const botaoCompraHtml =
-    curso?.botao_compra_html?.trim() ||
+    curso.botao_compra_html?.trim() ||
     null;
 
   /*
@@ -552,7 +559,7 @@ export default async function TreinamentoPage({
 
   const urlOferta =
     urlBotaoHotmart ||
-    curso?.link_inscricao ||
+    curso.link_inscricao ||
     canonicalUrl;
 
   /* =======================================================
