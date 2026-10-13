@@ -17,6 +17,12 @@ const SITE_URL =
 const SITE_NAME =
   "Academia Brasileira de Suprimentos";
 
+const SEO_BRAND =
+  "2BSUPPLY";
+
+const SEO_TITLE_MAX_LENGTH =
+  60;
+
 export const dynamic =
   "force-dynamic";
 
@@ -207,6 +213,86 @@ function limitarTexto(
     .trim()}…`;
 }
 
+function criarTituloSeo(
+  value: string,
+) {
+  const suffix =
+    ` | ${SEO_BRAND}`;
+
+  const base = limparTexto(
+    value,
+  )
+    .replace(
+      /(?:\s*[|–-]\s*2BSUPPLY)+\s*$/i,
+      "",
+    )
+    .trim();
+
+  const limiteBase =
+    SEO_TITLE_MAX_LENGTH -
+    suffix.length;
+
+  if (
+    base.length <=
+    limiteBase
+  ) {
+    return `${base}${suffix}`;
+  }
+
+  const tituloPrincipal =
+    base
+      .split(
+        /\s*[|–]\s*/,
+      )[0]
+      .trim();
+
+  const baseParaLimitar =
+    tituloPrincipal.length <=
+    limiteBase
+      ? tituloPrincipal
+      : base;
+
+  if (
+    baseParaLimitar.length <=
+    limiteBase
+  ) {
+    return `${baseParaLimitar}${suffix}`;
+  }
+
+  const recorte = baseParaLimitar.slice(
+    0,
+    limiteBase + 1,
+  );
+
+  const ultimoEspaco =
+    recorte.lastIndexOf(" ");
+
+  const baseLimitadaInicial =
+    ultimoEspaco > 0
+      ? recorte.slice(
+          0,
+          ultimoEspaco,
+        )
+      : baseParaLimitar.slice(
+          0,
+          limiteBase,
+        );
+
+  const baseLimitada =
+    baseLimitadaInicial
+      .replace(
+        /\s*[|–-]+\s*$/,
+        "",
+      )
+      .replace(
+        /\s+(?:e|de|da|do|das|dos|em|para|com)$/i,
+        "",
+      )
+      .trim();
+
+  return `${baseLimitada}${suffix}`;
+}
+
 /* =========================================================
    PEGAR URL DO HTML HOTMART
 ========================================================= */
@@ -261,8 +347,10 @@ export async function generateMetadata({
 
   if (!curso) {
     return {
-      title:
-        `Treinamento não encontrado | ${SITE_NAME}`,
+      title: {
+        absolute:
+          `Treinamento não encontrado | ${SEO_BRAND}`,
+      },
 
       description:
         "O treinamento informado não está disponível.",
@@ -279,13 +367,14 @@ export async function generateMetadata({
     };
   }
 
-  const titulo =
+  const titulo = criarTituloSeo(
     limparTexto(
       curso.seo_titulo,
     ) ||
-    limparTexto(
-      curso.titulo,
-    );
+      limparTexto(
+        curso.titulo,
+      ),
+  );
 
   const descricaoBase =
     limparTexto(
@@ -312,8 +401,10 @@ export async function generateMetadata({
     );
 
   return {
-    title:
-      titulo,
+    title: {
+      absolute:
+        titulo,
+    },
 
     description:
       descricao,

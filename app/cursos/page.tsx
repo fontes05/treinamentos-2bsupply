@@ -9,11 +9,22 @@ import { createPublicServerClient } from "@/lib/supabase/public-server";
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: "Cursos de Compras e Suprimentos",
+  title: {
+    absolute: "Cursos Online de Compras e Suprimentos | 2BSUPPLY",
+  },
   description:
-    "Conheça cursos de Compras, Suprimentos, Strategic Sourcing, negociação, contratos, tributação e inteligência artificial.",
+    "Encontre cursos online de Compras, Suprimentos, Strategic Sourcing, negociação, contratos, tributação e inteligência artificial aplicada.",
   alternates: {
     canonical: "https://absuprimentos.com.br/cursos",
+  },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "https://absuprimentos.com.br/cursos",
+    siteName: "Academia Brasileira de Suprimentos",
+    title: "Cursos Online de Compras e Suprimentos | 2BSUPPLY",
+    description:
+      "Cursos online para desenvolver competências em Compras, Suprimentos e Supply Chain.",
   },
 };
 

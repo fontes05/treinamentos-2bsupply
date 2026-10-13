@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import HomeClient, {
   type BannerHome,
   type Categoria,
@@ -11,6 +13,26 @@ const FALLBACK_BANNER =
   "/reuniao-estrategica-com-dashboard-global.png";
 
 export const revalidate = 300;
+
+export const metadata: Metadata = {
+  title: {
+    absolute: "Cursos de Compras e Suprimentos | 2BSUPPLY",
+  },
+  description:
+    "Cursos online e treinamentos in company para profissionais de Compras, Suprimentos e Supply Chain, com conteúdo prático e especialistas do mercado.",
+  alternates: {
+    canonical: "https://absuprimentos.com.br/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "https://absuprimentos.com.br/",
+    siteName: "Academia Brasileira de Suprimentos",
+    title: "Cursos de Compras e Suprimentos | 2BSUPPLY",
+    description:
+      "Cursos online e treinamentos in company para profissionais de Compras, Suprimentos e Supply Chain.",
+  },
+};
 
 export default async function HomePage() {
   const supabase = createPublicServerClient();
