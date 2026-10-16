@@ -48,8 +48,9 @@ export default function CertificacoesGrid({ certificacoes }: Props) {
               <Image
                 src={certificado.imagem}
                 alt={`Arte da certificação ${certificado.numero}`}
-                width={606}
-                height={377}
+width={760}
+  height={428}
+                unoptimized
                 sizes="(max-width: 650px) 100vw, (max-width: 1250px) 50vw, 25vw"
               />
             </button>
