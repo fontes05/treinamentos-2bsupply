@@ -128,7 +128,7 @@ export default function SiteHeader() {
         <div className="header-actions">
 
           <Link
-            href="/contato"
+            href="https://api.whatsapp.com/send?phone=5521999792912" target="_blank"
             className="header-contact"
           >
             <svg
