@@ -20,7 +20,7 @@ const certificacoes = [
     nome: "Gestão de Inteligência Artificial",
     descricao:
       "Demonstra nosso compromisso com o uso responsável, seguro e estruturado da inteligência artificial em nossos processos e serviços.",
-    imagem: "https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/certificacao-iso-absuprimentos-01.png",
+    imagem: "https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/selo-iso-42001-verde.png",
     pdf: "https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/iso-42001.pd.pdf",
   },
   {
@@ -28,7 +28,7 @@ const certificacoes = [
     nome: "Gestão da Privacidade da Informação",
     descricao:
       "Representa nosso compromisso com a proteção de dados pessoais e com as práticas de gestão da privacidade da informação.",
-    imagem: "https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/certificacao-iso-absuprimentos-02.png",
+    imagem: "https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/selo-iso-27701-verde.png",
     pdf: "https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/iso-27701.pdf",
   },
   {
@@ -36,7 +36,7 @@ const certificacoes = [
     nome: "Gestão da Segurança da Informação",
     descricao:
       "Atesta a adoção de um sistema de gestão voltado à segurança das informações da organização e de suas atividades.",
-    imagem: "https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/certificacao-iso-absuprimentos-03.png",
+    imagem: "https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/selo-iso-27001-verde.png",
     pdf: "https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/iso-27001-2.pdf",
   },
   {
@@ -44,7 +44,7 @@ const certificacoes = [
     nome: "Gestão da Qualidade",
     descricao:
       "Reforça nosso compromisso com a gestão da qualidade e a melhoria contínua dos nossos processos e serviços.",
-    imagem: "https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/certificacao-iso-absuprimentos-04.png",
+    imagem: "https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/selo-iso-9001-verde.png",
     pdf: "https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/Certificacoes/iso-9001.pdf",
   },
 ] as const;
