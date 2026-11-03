@@ -45,6 +45,12 @@ export default function SiteHeader() {
     };
   }, [mobileMenuOpen]);
 
+  const isHome = pathname === "/";
+  const isCursos = pathname.startsWith("/cursos");
+  const isCertificacoes = pathname.startsWith(
+    "/certificacoes",
+  );
+
   return (
     <header className="site-header">
       <div className="container header-content">
@@ -53,21 +59,21 @@ export default function SiteHeader() {
             LOGO
         ================================================= */}
 
-       <Link
-  href="/"
-  className="logo"
-  aria-label="Academia Brasileira de Suprimentos"
-  onClick={() => setMobileMenuOpen(false)}
->
-  <Image
-    src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/treinamentos-media/logos/logo-academia-brasileira-de-suprimentos-1.png"
-    alt="Academia Brasileira de Suprimentos"
-    width={190}
-    height={70}
-    priority
-    className="logo-image"
-  />
-</Link>
+        <Link
+          href="/"
+          className="logo"
+          aria-label="Academia Brasileira de Suprimentos"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <Image
+            src="https://taydbrfqmgvjzelvablx.supabase.co/storage/v1/object/public/treinamentos-media/logos/logo-academia-brasileira-de-suprimentos-1.png"
+            alt="Academia Brasileira de Suprimentos"
+            width={190}
+            height={70}
+            priority
+            className="logo-image"
+          />
+        </Link>
 
 
         {/* =================================================
@@ -80,24 +86,16 @@ export default function SiteHeader() {
         >
           <Link
             href="/"
-            className={
-              pathname === "/"
-                ? "active"
-                : ""
-            }
+            className={isHome ? "active" : ""}
+            aria-current={isHome ? "page" : undefined}
           >
             Início
           </Link>
 
           <Link
             href="/cursos"
-            className={
-              pathname.startsWith(
-                "/cursos",
-              )
-                ? "active"
-                : ""
-            }
+            className={isCursos ? "active" : ""}
+            aria-current={isCursos ? "page" : undefined}
           >
             Todos os cursos
           </Link>
@@ -106,17 +104,14 @@ export default function SiteHeader() {
             Depoimentos
           </Link>
 
-           <Link
+          <Link
             href="/certificacoes"
-            className={
-              pathname.startsWith(
-                "/certificacoes",
-              )
-                ? "active"
-                : ""
+            className={isCertificacoes ? "active" : ""}
+            aria-current={
+              isCertificacoes ? "page" : undefined
             }
           >
-           Certificações
+            Certificações
           </Link>
         </nav>
 
@@ -128,7 +123,9 @@ export default function SiteHeader() {
         <div className="header-actions">
 
           <Link
-            href="https://api.whatsapp.com/send?phone=5521999792912" target="_blank"
+            href="https://api.whatsapp.com/send?phone=5521999792912"
+            target="_blank"
+            rel="noopener noreferrer"
             className="header-contact"
           >
             <svg
@@ -212,10 +209,11 @@ export default function SiteHeader() {
           <Link
             href="/"
             className={
-              pathname === "/"
+              isHome
                 ? "mobile-menu-active"
                 : ""
             }
+            aria-current={isHome ? "page" : undefined}
           >
             <span>
               Início
@@ -228,12 +226,11 @@ export default function SiteHeader() {
           <Link
             href="/cursos"
             className={
-              pathname.startsWith(
-                "/cursos",
-              )
+              isCursos
                 ? "mobile-menu-active"
                 : ""
             }
+            aria-current={isCursos ? "page" : undefined}
           >
             <span>
               Todos os cursos
@@ -251,6 +248,25 @@ export default function SiteHeader() {
             <ChevronRight />
           </Link>
 
+
+          <Link
+            href="/certificacoes"
+            className={
+              isCertificacoes
+                ? "mobile-menu-active"
+                : ""
+            }
+            aria-current={
+              isCertificacoes ? "page" : undefined
+            }
+          >
+            <span>
+              Certificações
+            </span>
+
+            <ChevronRight />
+          </Link>
+
         </nav>
 
 
@@ -259,7 +275,7 @@ export default function SiteHeader() {
         =============================================== */}
 
         <Link
-          href="/contato"
+          href="https://api.whatsapp.com/send?phone=5521999792912"
           className="mobile-menu-contact"
         >
           <svg
